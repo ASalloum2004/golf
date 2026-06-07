@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
 import { usePhysicsStore } from '../../store/usePhysicsStore';
+import { CUP_CENTER, PLAY_AREA, WATER_POND } from '../../physics/constants';
 import { usePhysicsLoop } from '../../physics/usePhysicsLoop';
 
 /** Runs the custom physics engine inside the R3F Canvas context. */
@@ -67,6 +68,7 @@ function TargetHole({ position }: { position: [number, number, number] }) {
 }
 
 function WaterPond() {
+  const bankScale: [number, number, number] = [WATER_POND.radiusX + 0.8, WATER_POND.radiusZ + 0.45, 1];
   const reeds = [
     [-2.6, -0.8],
     [-2.2, 0.9],
@@ -74,30 +76,54 @@ function WaterPond() {
     [2.1, 0.8],
     [0.5, 1.15],
   ] as const;
+  const stones = [
+    [-3.1, -0.35, 0.24],
+    [-2.4, 1.1, 0.18],
+    [1.8, -1.05, 0.2],
+    [3.05, 0.35, 0.16],
+    [0.4, 1.28, 0.12],
+  ] as const;
+  const waves = [
+    [0, 0, 0.45, 0.2],
+    [-0.9, -0.18, 0.28, 0.14],
+    [1.0, 0.28, 0.34, 0.16],
+  ] as const;
 
   return (
-    <group position={[-8.5, 0.018, -19]} rotation={[0, -0.28, 0]}>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} scale={[3.8, 1.8, 1]}>
+    <group position={[WATER_POND.center.x, WATER_POND.surfaceY, WATER_POND.center.z]} rotation={[0, WATER_POND.rotationY, 0]}>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} scale={bankScale}>
         <circleGeometry args={[1, 64]} />
-        <meshStandardMaterial color="#315f42" roughness={0.95} />
+        <meshStandardMaterial color="#2f5f35" roughness={0.92} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[3.35, 1.45, 1]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[WATER_POND.radiusX, WATER_POND.radiusZ, 1]}>
         <circleGeometry args={[1, 64]} />
         <meshPhysicalMaterial
-          color="#1d7fa3"
-          roughness={0.08}
+          color="#1b8db6"
+          roughness={0.03}
           metalness={0}
-          transmission={0.2}
           transparent
-          opacity={0.82}
-          clearcoat={0.9}
-          clearcoatRoughness={0.12}
+          opacity={0.78}
+          clearcoat={1}
+          clearcoatRoughness={0.05}
+          reflectivity={0.8}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[2.7, 1.05, 1]} position={[0.15, 0.006, -0.08]}>
-        <ringGeometry args={[0.78, 0.82, 64]} />
-        <meshBasicMaterial color="#93d5e1" transparent opacity={0.28} side={THREE.DoubleSide} />
+      {waves.map(([x, z, sx, sz], index) => (
+        <mesh key={`${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} scale={[sx * WATER_POND.radiusX, sz * WATER_POND.radiusZ, 1]} position={[x, 0.008 + index * 0.001, z]}>
+          <ringGeometry args={[0.78, 0.82, 64]} />
+          <meshBasicMaterial color="#c7f9ff" transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+      ))}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[2.6, 0.72, 1]} position={[0.25, 0.01, -0.16]}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color="#ecfeff" transparent opacity={0.11} depthWrite={false} />
       </mesh>
+      {stones.map(([x, z, scale]) => (
+        <mesh key={`${x}-${z}`} castShadow receiveShadow position={[x, 0.035, z]} scale={[scale * 1.4, scale * 0.45, scale]}>
+          <sphereGeometry args={[1, 12, 8]} />
+          <meshStandardMaterial color="#64748b" roughness={0.95} />
+        </mesh>
+      ))}
       {reeds.map(([x, z], index) => (
         <group key={`${x}-${z}`} position={[x, 0.13, z]} rotation={[0, index * 0.8, 0]}>
           <mesh castShadow position={[0, 0.16, 0]} rotation={[0.2, 0, -0.15]}>
@@ -114,35 +140,66 @@ function WaterPond() {
   );
 }
 
-function FarFence() {
-  const posts = Array.from({ length: 9 }, (_, index) => -16 + index * 4);
+function BoundaryWall() {
+  const width = PLAY_AREA.maxX - PLAY_AREA.minX;
+  const length = PLAY_AREA.maxZ - PLAY_AREA.minZ;
+  const centerX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
+  const centerZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
+  const height = 1.15;
+  const thickness = 0.34;
+  const y = height / 2;
 
   return (
-    <group position={[0, 0, -44]}>
-      {posts.map((x) => (
-        <mesh key={x} castShadow receiveShadow position={[x, 0.65, 0]}>
-          <boxGeometry args={[0.14, 1.3, 0.14]} />
-          <meshStandardMaterial color="#7c4a2d" roughness={0.85} />
-        </mesh>
-      ))}
-      {[0.45, 0.88].map((height) => (
-        <mesh key={height} castShadow receiveShadow position={[0, height, 0]}>
-          <boxGeometry args={[33, 0.1, 0.11]} />
-          <meshStandardMaterial color="#9a6748" roughness={0.82} />
-        </mesh>
-      ))}
+    <group>
+      <mesh castShadow receiveShadow position={[centerX, y, PLAY_AREA.minZ - thickness / 2]}>
+        <boxGeometry args={[width + thickness * 2, height, thickness]} />
+        <meshStandardMaterial color="#8b8f7a" roughness={0.78} metalness={0.02} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[centerX, y, PLAY_AREA.maxZ + thickness / 2]}>
+        <boxGeometry args={[width + thickness * 2, height, thickness]} />
+        <meshStandardMaterial color="#8b8f7a" roughness={0.78} metalness={0.02} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[PLAY_AREA.minX - thickness / 2, y, centerZ]}>
+        <boxGeometry args={[thickness, height, length]} />
+        <meshStandardMaterial color="#7f846f" roughness={0.8} metalness={0.02} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[PLAY_AREA.maxX + thickness / 2, y, centerZ]}>
+        <boxGeometry args={[thickness, height, length]} />
+        <meshStandardMaterial color="#7f846f" roughness={0.8} metalness={0.02} />
+      </mesh>
+      <mesh receiveShadow position={[centerX, height + 0.035, PLAY_AREA.minZ - thickness / 2]}>
+        <boxGeometry args={[width + thickness * 2, 0.07, thickness + 0.04]} />
+        <meshStandardMaterial color="#b7b9a3" roughness={0.7} />
+      </mesh>
+      <mesh receiveShadow position={[centerX, height + 0.035, PLAY_AREA.maxZ + thickness / 2]}>
+        <boxGeometry args={[width + thickness * 2, 0.07, thickness + 0.04]} />
+        <meshStandardMaterial color="#b7b9a3" roughness={0.7} />
+      </mesh>
+      <mesh receiveShadow position={[PLAY_AREA.minX - thickness / 2, height + 0.035, centerZ]}>
+        <boxGeometry args={[thickness + 0.04, 0.07, length]} />
+        <meshStandardMaterial color="#b7b9a3" roughness={0.7} />
+      </mesh>
+      <mesh receiveShadow position={[PLAY_AREA.maxX + thickness / 2, height + 0.035, centerZ]}>
+        <boxGeometry args={[thickness + 0.04, 0.07, length]} />
+        <meshStandardMaterial color="#b7b9a3" roughness={0.7} />
+      </mesh>
     </group>
   );
 }
 
 function GrassStripes() {
-  const stripes = Array.from({ length: 14 }, (_, index) => -4 - index * 3);
+  const courseWidth = PLAY_AREA.maxX - PLAY_AREA.minX;
+  const courseLength = PLAY_AREA.maxZ - PLAY_AREA.minZ;
+  const centerX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
+  const stripeCount = Math.ceil(courseLength / 4);
+  const stripeDepth = courseLength / stripeCount;
+  const stripes = Array.from({ length: stripeCount }, (_, index) => PLAY_AREA.maxZ - stripeDepth / 2 - index * stripeDepth);
 
   return (
     <group>
       {stripes.map((z, index) => (
-        <mesh key={z} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006 + index * 0.0001, z]}>
-          <planeGeometry args={[16, 1.35]} />
+        <mesh key={z} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[centerX, 0.006 + index * 0.0001, z]}>
+          <planeGeometry args={[courseWidth, stripeDepth * 0.52]} />
           <meshBasicMaterial
             color={index % 2 === 0 ? '#d9f99d' : '#14532d'}
             transparent
@@ -181,8 +238,8 @@ function CameraRig() {
       target.lerp(vec.set(ballPosition[0], ballPosition[1], ballPosition[2]), smoothTime);
       state.camera.lookAt(target);
     } else if (mode === 'TopDown') {
-      state.camera.position.lerp(vec.set(0, 15, -25), smoothTime);
-      target.lerp(vec.set(0, 0, -30), smoothTime);
+      state.camera.position.lerp(vec.set(0, 150, (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2), smoothTime);
+      target.lerp(vec.set(0, 0, (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2), smoothTime);
       state.camera.lookAt(target);
     }
   });
@@ -231,6 +288,10 @@ export default function Scene() {
     Sand: { color: '#d4d487', roughness: 1.0, grid: '#a1a1aa' },
   };
   const terrain = surfaceConfig[surface];
+  const courseWidth = PLAY_AREA.maxX - PLAY_AREA.minX;
+  const courseLength = PLAY_AREA.maxZ - PLAY_AREA.minZ;
+  const courseCenterX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
+  const courseCenterZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
 
   const aimRotation = horizontalAngle * (Math.PI / 180);
   const loftRotation = loftAngle * (Math.PI / 180);
@@ -257,8 +318,8 @@ export default function Scene() {
       <Environment preset="park" />
 
       <WaterPond />
-      <FarFence />
-      <TargetHole position={[0, 0, -30]} />
+      <BoundaryWall />
+      <TargetHole position={[CUP_CENTER.x, CUP_CENTER.y, CUP_CENTER.z]} />
 
       {obstacles.map(obs => (
         <group key={obs.id} position={obs.position}>
@@ -307,13 +368,13 @@ export default function Scene() {
         />
       </mesh>
 
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[200, 200]} />
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[courseCenterX, 0, courseCenterZ]}>
+        <planeGeometry args={[courseWidth, courseLength]} />
         <meshStandardMaterial color={terrain.color} map={grassTexture} roughness={terrain.roughness} metalness={0.03} />
       </mesh>
 
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, -20]}>
-        <planeGeometry args={[18, 48]} />
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[courseCenterX, 0.003, courseCenterZ]}>
+        <planeGeometry args={[courseWidth * 0.55, courseLength * 0.86]} />
         <meshStandardMaterial color="#2f9e44" roughness={0.55} transparent opacity={0.26} depthWrite={false} />
       </mesh>
       <GrassStripes />

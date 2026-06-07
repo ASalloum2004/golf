@@ -115,7 +115,8 @@ function checkWallAlongSegment(from: THREE.Vector3, to: THREE.Vector3, br: numbe
   const hitNormal = new THREE.Vector3();
 
   if (isInsideBox(from, min, max)) {
-    return checkWall(to, br, wallBase);
+    const currentCollision = checkWall(from, br, wallBase);
+    if (currentCollision.kind !== 'none') return currentCollision;
   }
 
   for (const axis of ['x', 'y', 'z'] as const) {

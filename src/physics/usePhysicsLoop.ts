@@ -18,7 +18,9 @@ import { physicsStep, createInitialState, getReynoldsNumber } from './PhysicsEng
 import type { BallSimState } from './PhysicsEngine';
 
 // Max size of one Euler sub-step (≈62 sub-steps/s at 60 fps render rate)
-const MAX_SUB_DT = 0.016;
+const FIXED_DT = 1 / 240;
+const MAX_FRAME_DT = 0.05;
+const MAX_STEPS_PER_FRAME = 24;
 
 export function usePhysicsLoop(): void {
   // ── Non-reactive store snapshot ──────────────────────────────────────────
@@ -33,6 +35,7 @@ export function usePhysicsLoop(): void {
   // ── Simulation state (pure refs, never touches React) ────────────────────
   const simRef     = useRef<BallSimState | null>(null);
   const wasActive  = useRef(false);
+  const accumulatorRef = useRef(0);
 
   // ── Physics tick ─────────────────────────────────────────────────────────
   useFrame((_, delta) => {
@@ -41,6 +44,7 @@ export function usePhysicsLoop(): void {
     // Detect fresh launch (simActive flipped from false → true)
     if (snap.simActive && !wasActive.current) {
       simRef.current = createInitialState(snap);
+      accumulatorRef.current = 0;
     }
     wasActive.current = snap.simActive;
 
@@ -53,16 +57,18 @@ export function usePhysicsLoop(): void {
     }
 
     // ── Sub-stepped integration ──────────────────────────────────────────
-    // Cap delta to 50 ms to prevent spiral-of-death after tab background pause
-    const capped = Math.min(delta, 0.05);
-    const steps  = Math.ceil(capped / MAX_SUB_DT);
-    const dt     = capped / steps;
+    // Fixed timestep keeps physics deterministic and avoids frame-rate-dependent collisions.
+    accumulatorRef.current += Math.min(delta, MAX_FRAME_DT);
 
     let cur = simRef.current;
-    for (let i = 0; i < steps; i++) {
-      cur = physicsStep(cur, dt, snap, snap.obstacles);
+    let steps = 0;
+    while (accumulatorRef.current >= FIXED_DT && steps < MAX_STEPS_PER_FRAME) {
+      cur = physicsStep(cur, FIXED_DT, snap, snap.obstacles);
+      accumulatorRef.current -= FIXED_DT;
+      steps += 1;
       if (cur.phase === 'stopped') break;
     }
+    if (steps >= MAX_STEPS_PER_FRAME) accumulatorRef.current = 0;
     simRef.current = cur;
 
     // ── Push ball position to store ──────────────────────────────────────

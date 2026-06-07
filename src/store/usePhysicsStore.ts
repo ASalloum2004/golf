@@ -117,14 +117,14 @@ function nextObstacleId(obstacles: Obstacle[], type: Obstacle['type']): string {
 
 function nextObstaclePosition(obstacles: Obstacle[], type: Obstacle['type']): [number, number, number] {
   const count = obstacles.filter(obstacle => obstacle.type === type).length;
-  const lane = [0, -1.5, 1.5, -0.5, 0.5][count % 5];
-  const distance = type === 'Tree' ? -6 - count * 3 : -3 - count * 3;
+  const lane = [0, -5, 5, -10, 10, -15, 15][count % 7];
+  const distance = type === 'Tree' ? -18 - count * 9 : -26 - count * 11;
   return [lane, 0, distance];
 }
 
 const initialPhysicsState: PhysicsState = {
   loftAngle: 45, clubFriction: 0.8,
-  initialVelocity: 15, verticalAngle: 25, horizontalAngle: 0, spinSpeed: 500, spinAxis: 0,
+  initialVelocity: 32, verticalAngle: 24, horizontalAngle: 0, spinSpeed: 500, spinAxis: 0,
   mass: 45.93, radius: 0.02135, inertiaConstant: 0.4,
   gravity: 9.81, airDensity: 1.225, windSpeed: 0, windDirection: 0, buoyancy: true,
   dragCoeff: 0.24, liftCoeff: 0.15, sideForceCoeff: 0, spinDamping: 0.05,

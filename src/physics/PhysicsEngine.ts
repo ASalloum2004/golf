@@ -13,12 +13,15 @@
  * physical interpretation and time integration.
  */
 
+import * as THREE from 'three';
 import type { Obstacle, PhysicsState } from '../store/usePhysicsStore';
 import { CUP_CENTER, EPS } from './constants';
+import { checkBoundaryAlongSegment, resolveBoundaryHit } from './collision/boundary';
 import { checkCupAlongSegment } from './collision/cup';
 import { checkFlagstickAlongSegment } from './collision/flagstick';
 import { groundBounce } from './collision/ground';
 import { applyVegetation, checkObstacleAlongSegment, resolveHard } from './collision/obstacles';
+import { checkWaterAlongSegment } from './collision/water';
 import { rk4Step } from './integration/rk4';
 import { rollingStep } from './motion/rolling';
 import { sanitizeParams } from './params';
@@ -28,6 +31,19 @@ import { clamp, horizontal, safeDt, sanitizeVector } from './utils';
 export type { BallSimState, SimPhase } from './types';
 export { createInitialState } from './initialState';
 export { getReynoldsNumber } from './forces/reynolds';
+
+function stopAtWater(
+  hitPoint: THREE.Vector3,
+  radius: number,
+): Pick<BallSimState, 'position' | 'velocity' | 'omega' | 'phase' | 'inCup'> {
+  return {
+    position: new THREE.Vector3(hitPoint.x, Math.max(radius * 0.35, hitPoint.y), hitPoint.z),
+    velocity: new THREE.Vector3(),
+    omega: new THREE.Vector3(),
+    phase: 'stopped',
+    inCup: false,
+  };
+}
 
 export function physicsStep(
   state: BallSimState,
@@ -48,6 +64,7 @@ export function physicsStep(
   let maxHeight = state.maxHeight;
   let landingPos = state.landingPos;
   let landingVel = state.landingVel;
+  const sortedObstacles = [...obstacles].sort((a, b) => a.id.localeCompare(b.id));
 
   if (phase === 'flying') {
     const previousPos = pos.clone();
@@ -77,7 +94,18 @@ export function physicsStep(
       phase = bounce.nextPhase;
     }
 
-    for (const obs of obstacles) {
+    const water = checkWaterAlongSegment(previousPos, pos, p.radius);
+    if (water.hit) {
+      const stopped = stopAtWater(water.point, p.radius);
+      pos = stopped.position;
+      vel = stopped.velocity;
+      omega = stopped.omega;
+      phase = stopped.phase;
+      inCup = stopped.inCup;
+    }
+
+    for (const obs of sortedObstacles) {
+      if (phase === 'stopped') break;
       const collision = checkObstacleAlongSegment(previousPos, pos, p.radius, obs);
 
       if (collision.kind === 'hard') {
@@ -93,7 +121,17 @@ export function physicsStep(
       }
     }
 
-    const cup = checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
+    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(previousPos, pos, p.radius);
+    if (boundary?.hit) {
+      const resolved = resolveBoundaryHit(boundary, vel, omega, p);
+      pos = resolved.pos;
+      vel = resolved.vel;
+      omega = resolved.omega;
+    }
+
+    const cup = phase === 'stopped'
+      ? { inCup: false, newVel: vel.clone() }
+      : checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
@@ -119,7 +157,18 @@ export function physicsStep(
     omega = roll.omega;
     if (roll.stopped) phase = 'stopped';
 
-    for (const obs of obstacles) {
+    const water = phase === 'stopped' ? null : checkWaterAlongSegment(previousPos, pos, p.radius);
+    if (water?.hit) {
+      const stopped = stopAtWater(water.point, p.radius);
+      pos = stopped.position;
+      vel = stopped.velocity;
+      omega = stopped.omega;
+      phase = stopped.phase;
+      inCup = stopped.inCup;
+    }
+
+    for (const obs of sortedObstacles) {
+      if (phase === 'stopped') break;
       const collision = checkObstacleAlongSegment(previousPos, pos, p.radius, obs);
 
       if (collision.kind === 'hard') {
@@ -135,7 +184,17 @@ export function physicsStep(
       }
     }
 
-    const cup = checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
+    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(previousPos, pos, p.radius);
+    if (boundary?.hit) {
+      const resolved = resolveBoundaryHit(boundary, vel, omega, p);
+      pos = resolved.pos.setY(p.radius);
+      vel = horizontal(resolved.vel);
+      omega = resolved.omega;
+    }
+
+    const cup = phase === 'stopped'
+      ? { inCup: false, newVel: vel.clone() }
+      : checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
