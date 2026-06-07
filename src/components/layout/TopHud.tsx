@@ -12,6 +12,9 @@ export function TopHud({ isSidebarOpen }: TopHudProps) {
   const [isHudVisible, setIsHudVisible] = useState(true);
   const [isImpactRowVisible, setIsImpactRowVisible] = useState(true);
   const metrics = usePhysicsStore((state) => state.metrics);
+  const isWin = metrics.status === 'You Win';
+  const isLose = metrics.status === 'You Lose';
+  const isResult = isWin || isLose;
 
   const reynoldsDisplay =
     metrics.reynoldsNumber === 0
@@ -40,10 +43,21 @@ export function TopHud({ isSidebarOpen }: TopHudProps) {
                       ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]'
                       : metrics.status === 'Rolling'
                         ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-                        : 'bg-emerald-500',
+                        : isLose
+                          ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'
+                          : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]',
                 )}
               />
-              <span className="text-sm font-medium text-slate-200">{metrics.status}</span>
+              <span
+                className={cn(
+                  'font-medium text-slate-200',
+                  isResult ? 'text-lg font-semibold' : 'text-sm',
+                  isWin && 'text-emerald-300',
+                  isLose && 'text-red-300',
+                )}
+              >
+                {metrics.status}
+              </span>
             </div>
 
             <div className="flex flex-1 justify-between gap-8">

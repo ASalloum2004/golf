@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
@@ -9,16 +9,6 @@ import { usePhysicsLoop } from '../../physics/usePhysicsLoop';
 function PhysicsController() {
   usePhysicsLoop();
   return null;
-}
-
-function LerpGroup({ position, children }: { position: [number, number, number], children: React.ReactNode }) {
-  const ref = useRef<THREE.Group>(null!);
-  const vec = useMemo(() => new THREE.Vector3(), []);
-  useFrame((_, delta) => {
-    vec.set(...position);
-    ref.current.position.lerp(vec, 10 * delta);
-  });
-  return <group ref={ref}>{children}</group>;
 }
 
 function Tree() {
@@ -76,6 +66,100 @@ function TargetHole({ position }: { position: [number, number, number] }) {
   );
 }
 
+function WaterPond() {
+  const reeds = [
+    [-2.6, -0.8],
+    [-2.2, 0.9],
+    [2.4, -0.7],
+    [2.1, 0.8],
+    [0.5, 1.15],
+  ] as const;
+
+  return (
+    <group position={[-8.5, 0.018, -19]} rotation={[0, -0.28, 0]}>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} scale={[3.8, 1.8, 1]}>
+        <circleGeometry args={[1, 64]} />
+        <meshStandardMaterial color="#315f42" roughness={0.95} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[3.35, 1.45, 1]}>
+        <circleGeometry args={[1, 64]} />
+        <meshPhysicalMaterial
+          color="#1d7fa3"
+          roughness={0.08}
+          metalness={0}
+          transmission={0.2}
+          transparent
+          opacity={0.82}
+          clearcoat={0.9}
+          clearcoatRoughness={0.12}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[2.7, 1.05, 1]} position={[0.15, 0.006, -0.08]}>
+        <ringGeometry args={[0.78, 0.82, 64]} />
+        <meshBasicMaterial color="#93d5e1" transparent opacity={0.28} side={THREE.DoubleSide} />
+      </mesh>
+      {reeds.map(([x, z], index) => (
+        <group key={`${x}-${z}`} position={[x, 0.13, z]} rotation={[0, index * 0.8, 0]}>
+          <mesh castShadow position={[0, 0.16, 0]} rotation={[0.2, 0, -0.15]}>
+            <cylinderGeometry args={[0.012, 0.018, 0.42, 5]} />
+            <meshStandardMaterial color="#365314" roughness={0.9} />
+          </mesh>
+          <mesh castShadow position={[0.08, 0.13, 0.04]} rotation={[-0.18, 0, 0.2]}>
+            <cylinderGeometry args={[0.01, 0.015, 0.34, 5]} />
+            <meshStandardMaterial color="#4d7c0f" roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function FarFence() {
+  const posts = Array.from({ length: 9 }, (_, index) => -16 + index * 4);
+
+  return (
+    <group position={[0, 0, -44]}>
+      {posts.map((x) => (
+        <mesh key={x} castShadow receiveShadow position={[x, 0.65, 0]}>
+          <boxGeometry args={[0.14, 1.3, 0.14]} />
+          <meshStandardMaterial color="#7c4a2d" roughness={0.85} />
+        </mesh>
+      ))}
+      {[0.45, 0.88].map((height) => (
+        <mesh key={height} castShadow receiveShadow position={[0, height, 0]}>
+          <boxGeometry args={[33, 0.1, 0.11]} />
+          <meshStandardMaterial color="#9a6748" roughness={0.82} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function GrassStripes() {
+  const stripes = Array.from({ length: 14 }, (_, index) => -4 - index * 3);
+
+  return (
+    <group>
+      {stripes.map((z, index) => (
+        <mesh key={z} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006 + index * 0.0001, z]}>
+          <planeGeometry args={[16, 1.35]} />
+          <meshBasicMaterial
+            color={index % 2 === 0 ? '#d9f99d' : '#14532d'}
+            transparent
+            opacity={index % 2 === 0 ? 0.07 : 0.05}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function seededNoise(seed: number): number {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 function CameraRig() {
   const mode = usePhysicsStore(state => state.cameraMode);
   const ballPosition = usePhysicsStore(state => state.ballPosition);
@@ -112,6 +196,34 @@ export default function Scene() {
     obstacles, ballPosition 
   } = usePhysicsStore();
 
+  const grassTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#1f8a3a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < 4500; i++) {
+      const shade = 72 + Math.floor(seededNoise(i + 1) * 88);
+      const green = 120 + Math.floor(seededNoise(i + 2) * 80);
+      const blue = 45 + Math.floor(seededNoise(i + 3) * 50);
+      const alpha = 0.08 + seededNoise(i + 4) * 0.12;
+      const x = seededNoise(i + 5) * canvas.width;
+      const y = seededNoise(i + 6) * canvas.height;
+      const height = 2 + seededNoise(i + 7) * 3;
+      ctx.fillStyle = `rgba(${shade}, ${green}, ${blue}, ${alpha})`;
+      ctx.fillRect(x, y, 1, height);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(36, 36);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }, []);
+
   const surfaceConfig = {
     Green: { color: '#4ade80', roughness: 0.3, grid: '#166534' },
     Fairway: { color: '#16a34a', roughness: 0.6, grid: '#14532d' },
@@ -129,6 +241,7 @@ export default function Scene() {
       <PhysicsController />
       <CameraRig />
 
+      <fog attach="fog" args={['#d8f1ff', 35, 95]} />
       <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />
       <ambientLight intensity={0.4} />
       <directionalLight 
@@ -143,12 +256,14 @@ export default function Scene() {
       </directionalLight>
       <Environment preset="park" />
 
+      <WaterPond />
+      <FarFence />
       <TargetHole position={[0, 0, -30]} />
 
       {obstacles.map(obs => (
-        <LerpGroup key={obs.id} position={obs.position}>
+        <group key={obs.id} position={obs.position}>
           {obs.type === 'Tree' ? <Tree /> : <Wall />}
-        </LerpGroup>
+        </group>
       ))}
 
       <group rotation={[0, -aimRotation, 0]}>
@@ -194,8 +309,14 @@ export default function Scene() {
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color={terrain.color} roughness={terrain.roughness} metalness={0.05} />
+        <meshStandardMaterial color={terrain.color} map={grassTexture} roughness={terrain.roughness} metalness={0.03} />
       </mesh>
+
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, -20]}>
+        <planeGeometry args={[18, 48]} />
+        <meshStandardMaterial color="#2f9e44" roughness={0.55} transparent opacity={0.26} depthWrite={false} />
+      </mesh>
+      <GrassStripes />
 
       <Grid 
         infiniteGrid 

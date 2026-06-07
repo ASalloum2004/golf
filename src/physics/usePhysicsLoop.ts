@@ -94,9 +94,9 @@ export function usePhysicsLoop(): void {
     }
 
     const status =
-      cur.inCup              ? 'In Cup!'  :
+      cur.inCup              ? 'You Win'  :
       cur.phase === 'flying' ? 'Flying'   :
-      cur.phase === 'rolling'? 'Rolling'  : 'Stopped';
+      cur.phase === 'rolling'? 'Rolling'  : 'You Lose';
 
     usePhysicsStore.getState().updateMetrics({
       status,

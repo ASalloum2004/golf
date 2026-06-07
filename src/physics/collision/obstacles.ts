@@ -4,6 +4,10 @@ import { EPS } from '../constants';
 import type { CollisionResult, SafePhysicsParams } from '../types';
 import { clamp, horizontal } from '../utils';
 
+const WALL_HALF = new THREE.Vector3(1.25, 0.6, 0.2);
+const COLLISION_SLOP = 0.002;
+type WallAxis = 'x' | 'y' | 'z';
+
 function closestPointOnSegmentXZ(from: THREE.Vector3, to: THREE.Vector3, target: THREE.Vector3): THREE.Vector3 {
   const sx = to.x - from.x;
   const sz = to.z - from.z;
@@ -44,19 +48,56 @@ function checkTreeAlongSegment(from: THREE.Vector3, to: THREE.Vector3, br: numbe
   return checkTree(to, br, tree);
 }
 
+function wallCenter(wallBase: THREE.Vector3): THREE.Vector3 {
+  return wallBase.clone().setY(wallBase.y + 0.6);
+}
+
+function isInsideBox(point: THREE.Vector3, min: THREE.Vector3, max: THREE.Vector3): boolean {
+  return point.x >= min.x && point.x <= max.x
+    && point.y >= min.y && point.y <= max.y
+    && point.z >= min.z && point.z <= max.z;
+}
+
+function wallInsideNormal(ball: THREE.Vector3, center: THREE.Vector3): { normal: THREE.Vector3; depth: number } {
+  const offsets = {
+    x: ball.x - center.x,
+    y: ball.y - center.y,
+    z: ball.z - center.z,
+  };
+
+  const candidates: Array<{ axis: WallAxis; clearance: number; sign: number }> = [
+    { axis: 'x', clearance: WALL_HALF.x - Math.abs(offsets.x), sign: offsets.x >= 0 ? 1 : -1 },
+    { axis: 'z', clearance: WALL_HALF.z - Math.abs(offsets.z), sign: offsets.z >= 0 ? 1 : -1 },
+  ];
+  candidates.sort((a, b) => a.clearance - b.clearance);
+
+  if (ball.y > center.y + WALL_HALF.y) {
+    candidates.unshift({ axis: 'y', clearance: 0, sign: 1 });
+  }
+
+  const nearest = candidates[0];
+  const normal = new THREE.Vector3();
+  normal[nearest.axis] = nearest.sign;
+  return { normal, depth: Math.max(0, nearest.clearance) };
+}
+
 function checkWall(ball: THREE.Vector3, br: number, wallBase: THREE.Vector3): CollisionResult {
-  const center = wallBase.clone().setY(wallBase.y + 0.6);
-  const half = new THREE.Vector3(1.25, 0.6, 0.2);
+  const center = wallCenter(wallBase);
   const closest = new THREE.Vector3(
-    clamp(ball.x, center.x - half.x, center.x + half.x),
-    clamp(ball.y, center.y - half.y, center.y + half.y),
-    clamp(ball.z, center.z - half.z, center.z + half.z),
+    clamp(ball.x, center.x - WALL_HALF.x, center.x + WALL_HALF.x),
+    clamp(ball.y, center.y - WALL_HALF.y, center.y + WALL_HALF.y),
+    clamp(ball.z, center.z - WALL_HALF.z, center.z + WALL_HALF.z),
   );
   const diff = ball.clone().sub(closest);
   const dist = diff.length();
 
   if (dist < br) {
-    const normal = dist > EPS ? diff.divideScalar(dist) : new THREE.Vector3(0, 1, 0);
+    if (dist <= EPS) {
+      const inside = wallInsideNormal(ball, center);
+      return { kind: 'hard', normal: inside.normal, depth: br + inside.depth, point: ball.clone() };
+    }
+
+    const normal = diff.divideScalar(dist);
     return { kind: 'hard', normal, depth: br - dist, point: ball.clone() };
   }
 
@@ -64,14 +105,18 @@ function checkWall(ball: THREE.Vector3, br: number, wallBase: THREE.Vector3): Co
 }
 
 function checkWallAlongSegment(from: THREE.Vector3, to: THREE.Vector3, br: number, wallBase: THREE.Vector3): CollisionResult {
-  const center = wallBase.clone().setY(wallBase.y + 0.6);
-  const half = new THREE.Vector3(1.25 + br, 0.6 + br, 0.2 + br);
+  const center = wallCenter(wallBase);
+  const half = new THREE.Vector3(WALL_HALF.x + br, WALL_HALF.y + br, WALL_HALF.z + br);
   const min = center.clone().sub(half);
   const max = center.clone().add(half);
   const delta = to.clone().sub(from);
   let tMin = 0;
   let tMax = 1;
   const hitNormal = new THREE.Vector3();
+
+  if (isInsideBox(from, min, max)) {
+    return checkWall(to, br, wallBase);
+  }
 
   for (const axis of ['x', 'y', 'z'] as const) {
     const d = delta[axis];
@@ -100,7 +145,8 @@ function checkWallAlongSegment(from: THREE.Vector3, to: THREE.Vector3, br: numbe
 
   if (tMin >= 0 && tMin <= 1) {
     const point = from.clone().addScaledVector(delta, tMin);
-    return { kind: 'hard', normal: hitNormal, depth: 0, point };
+    if (hitNormal.lengthSq() <= EPS) return checkWall(to, br, wallBase);
+    return { kind: 'hard', normal: hitNormal, depth: COLLISION_SLOP, point };
   }
 
   return checkWall(to, br, wallBase);
@@ -148,13 +194,14 @@ export function resolveHard(
   depth: number,
   p: SafePhysicsParams,
 ): { pos: THREE.Vector3; vel: THREE.Vector3; omega: THREE.Vector3 } {
-  const newPos = pos.clone().addScaledVector(normal, Math.max(0, depth));
-  const vn = vel.dot(normal);
+  const collisionNormal = normal.lengthSq() > EPS ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+  const newPos = pos.clone().addScaledVector(collisionNormal, Math.max(0, depth) + COLLISION_SLOP);
+  const vn = vel.dot(collisionNormal);
   if (vn >= 0) return { pos: newPos, vel: vel.clone(), omega: omega.clone() };
 
   const normalDelta = -(1 + p.obstacleRestitution) * vn;
-  const newVel = vel.clone().addScaledVector(normal, normalDelta);
-  const tangent = newVel.clone().sub(normal.clone().multiplyScalar(newVel.dot(normal)));
+  const newVel = vel.clone().addScaledVector(collisionNormal, normalDelta);
+  const tangent = newVel.clone().sub(collisionNormal.clone().multiplyScalar(newVel.dot(collisionNormal)));
   const tangentSpeed = tangent.length();
 
   if (tangentSpeed > EPS && p.obstacleFriction > 0) {

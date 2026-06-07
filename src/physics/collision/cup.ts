@@ -1,7 +1,17 @@
 import * as THREE from 'three';
 import { CUP_CENTER, CUP_R, EPS } from '../constants';
 import type { SafePhysicsParams } from '../types';
-import { horizontal } from '../utils';
+import { clamp, horizontal } from '../utils';
+
+function closestPointOnCupPath(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3 {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const lenSq = dx * dx + dz * dz;
+  if (lenSq < EPS) return to.clone();
+
+  const t = clamp(((CUP_CENTER.x - from.x) * dx + (CUP_CENTER.z - from.z) * dz) / lenSq, 0, 1);
+  return from.clone().lerp(to, t);
+}
 
 export function checkCup(
   pos: THREE.Vector3,
@@ -26,4 +36,17 @@ export function checkCup(
   }
 
   return { inCup: false, newVel: vel.clone() };
+}
+
+export function checkCupAlongSegment(
+  from: THREE.Vector3,
+  to: THREE.Vector3,
+  vel: THREE.Vector3,
+  br: number,
+  p: SafePhysicsParams,
+): { inCup: boolean; newVel: THREE.Vector3 } {
+  const closest = closestPointOnCupPath(from, to);
+  const segmentCup = checkCup(closest, vel, br, p);
+  if (segmentCup.inCup || !segmentCup.newVel.equals(vel)) return segmentCup;
+  return checkCup(to, vel, br, p);
 }

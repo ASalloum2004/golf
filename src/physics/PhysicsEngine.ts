@@ -15,8 +15,8 @@
 
 import type { Obstacle, PhysicsState } from '../store/usePhysicsStore';
 import { CUP_CENTER, EPS } from './constants';
-import { checkCup } from './collision/cup';
-import { checkFlagstick } from './collision/flagstick';
+import { checkCupAlongSegment } from './collision/cup';
+import { checkFlagstickAlongSegment } from './collision/flagstick';
 import { groundBounce } from './collision/ground';
 import { applyVegetation, checkObstacleAlongSegment, resolveHard } from './collision/obstacles';
 import { rk4Step } from './integration/rk4';
@@ -93,7 +93,7 @@ export function physicsStep(
       }
     }
 
-    const cup = checkCup(pos, vel, p.radius, p);
+    const cup = checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
@@ -102,7 +102,7 @@ export function physicsStep(
       omega.set(0, 0, 0);
     } else {
       vel.copy(cup.newVel);
-      const flag = checkFlagstick(pos, vel, p.radius, p);
+      const flag = checkFlagstickAlongSegment(previousPos, pos, vel, p.radius, p);
       if (flag.hit) vel.copy(flag.newVel);
     }
 
@@ -135,7 +135,7 @@ export function physicsStep(
       }
     }
 
-    const cup = checkCup(pos, vel, p.radius, p);
+    const cup = checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
@@ -144,6 +144,8 @@ export function physicsStep(
       omega.set(0, 0, 0);
     } else {
       vel.copy(cup.newVel);
+      const flag = checkFlagstickAlongSegment(previousPos, pos, vel, p.radius, p);
+      if (flag.hit) vel.copy(flag.newVel);
     }
   }
 
