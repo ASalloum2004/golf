@@ -71,20 +71,26 @@ export function TopHud({ isSidebarOpen }: TopHudProps) {
             <div className="flex items-center gap-1.5 pl-6 shrink-0">
               <button
                 onClick={() => setIsImpactRowVisible((visible) => !visible)}
+                aria-label={isImpactRowVisible ? 'Hide Impact Row' : 'Show Impact Row'}
                 title={isImpactRowVisible ? 'Hide impact row' : 'Show impact row'}
-                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/15 bg-slate-900/75 px-2.5 text-[11px] font-semibold text-slate-200 shadow-sm shadow-black/20 transition-all hover:border-white/25 hover:bg-slate-800/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400/60"
               >
                 <ChevronDown
                   size={14}
                   className={cn('transition-transform duration-200', !isImpactRowVisible && '-rotate-90')}
                 />
+                <span className="whitespace-nowrap">
+                  {isImpactRowVisible ? 'Hide Impact Row' : 'Show Impact Row'}
+                </span>
               </button>
               <button
                 onClick={() => setIsHudVisible(false)}
+                aria-label="Hide HUD"
                 title="Hide HUD"
-                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/15 bg-slate-900/75 px-2.5 text-[11px] font-semibold text-slate-200 shadow-sm shadow-black/20 transition-all hover:border-white/25 hover:bg-slate-800/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400/60"
               >
                 <EyeOff size={14} />
+                <span className="whitespace-nowrap">Hide HUD</span>
               </button>
             </div>
           </div>
@@ -105,7 +111,7 @@ export function TopHud({ isSidebarOpen }: TopHudProps) {
       ) : (
         <button
           onClick={() => setIsHudVisible(true)}
-          className="glass-panel pointer-events-auto px-4 py-2 rounded-xl flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200 hover:bg-white/5 border border-white/10 transition-all shadow-lg"
+          className="glass-panel pointer-events-auto px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/70 hover:bg-slate-800/90 border border-white/15 hover:border-white/25 transition-all shadow-lg"
         >
           <Eye size={13} />
           Show HUD

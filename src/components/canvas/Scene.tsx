@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
@@ -40,28 +40,195 @@ function Wall() {
   );
 }
 
+function Bush({ scale = 1 }: { scale?: number }) {
+  return (
+    <group scale={[scale, scale, scale]}>
+      <mesh castShadow receiveShadow position={[0, 0.26, 0]} scale={[0.85, 0.55, 0.7]}>
+        <sphereGeometry args={[0.55, 16, 10]} />
+        <meshStandardMaterial color="#166534" roughness={0.92} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[-0.34, 0.22, 0.12]} scale={[0.62, 0.46, 0.58]}>
+        <sphereGeometry args={[0.5, 14, 8]} />
+        <meshStandardMaterial color="#15803d" roughness={0.94} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0.36, 0.24, -0.08]} scale={[0.6, 0.48, 0.55]}>
+        <sphereGeometry args={[0.48, 14, 8]} />
+        <meshStandardMaterial color="#14532d" roughness={0.94} />
+      </mesh>
+    </group>
+  );
+}
+
+function CourseDecor() {
+  const trees = [
+    [PLAY_AREA.minX - 3.1, 0, PLAY_AREA.maxZ - 12, 0.9, 0.2],
+    [PLAY_AREA.maxX + 3.3, 0, PLAY_AREA.maxZ - 28, 1.0, -0.5],
+    [PLAY_AREA.minX - 3.5, 0, PLAY_AREA.minZ + 26, 1.05, 0.8],
+    [PLAY_AREA.maxX + 3.4, 0, PLAY_AREA.minZ + 18, 0.9, -0.9],
+    [-22, 0, PLAY_AREA.minZ - 3.2, 0.95, 0.25],
+    [24, 0, PLAY_AREA.minZ - 3.1, 1.08, -0.35],
+  ] as const;
+  const bushes = [
+    [PLAY_AREA.minX - 1.0, 0, 2, 0.74],
+    [PLAY_AREA.maxX + 1.0, 0, -15, 0.82],
+    [PLAY_AREA.minX - 1.05, 0, -36, 0.7],
+    [PLAY_AREA.maxX + 1.05, 0, -54, 0.78],
+    [PLAY_AREA.minX - 1.0, 0, -82, 0.86],
+    [PLAY_AREA.maxX + 1.0, 0, -92, 0.72],
+    [-28, 0, PLAY_AREA.maxZ + 1.0, 0.7],
+    [18, 0, PLAY_AREA.maxZ + 1.0, 0.78],
+    [-12, 0, PLAY_AREA.minZ - 1.0, 0.82],
+    [10, 0, PLAY_AREA.minZ - 1.0, 0.72],
+  ] as const;
+
+  return (
+    <group>
+      {trees.map(([x, y, z, scale, rotation]) => (
+        <group key={`decor-tree-${x}-${z}`} position={[x, y, z]} scale={[scale, scale, scale]} rotation={[0, rotation, 0]}>
+          <Tree />
+        </group>
+      ))}
+      {bushes.map(([x, y, z, scale]) => (
+        <group key={`decor-bush-${x}-${z}`} position={[x, y, z]}>
+          <Bush scale={scale} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function TargetHole({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-        <circleGeometry args={[6, 64]} />
-        <meshStandardMaterial color="#4ade80" roughness={0.3} metalness={0.05} />
+      <mesh receiveShadow position={[0, -0.115, 0]}>
+        <cylinderGeometry args={[0.148, 0.108, 0.26, 64, 1, true]} />
+        <meshStandardMaterial color="#dbe5ef" roughness={0.72} side={THREE.DoubleSide} />
       </mesh>
-      <mesh receiveShadow position={[0, 0.004, 0]}>
-        <cylinderGeometry args={[0.054, 0.054, 0.1, 32]} />
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.21, 0]}>
+        <circleGeometry args={[0.106, 64]} />
         <meshStandardMaterial color="#020617" roughness={1} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <ringGeometry args={[0.065, 0.12, 48]} />
-        <meshBasicMaterial color="#f8fafc" side={THREE.DoubleSide} />
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
+        <circleGeometry args={[0.124, 64]} />
+        <meshStandardMaterial color="#030712" roughness={1} />
       </mesh>
-      <mesh castShadow receiveShadow position={[0, 1, 0]}>
-        <cylinderGeometry args={[0.01, 0.01, 2]} />
+      <mesh position={[0, 0.018, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.148, 0.011, 12, 64]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.48} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0.025, 1.05, 0]}>
+        <cylinderGeometry args={[0.009, 0.009, 2.1, 12]} />
         <meshStandardMaterial color="#e2e8f0" metalness={0.5} roughness={0.2} />
       </mesh>
-      <mesh castShadow position={[0.25, 1.8, 0]}>
-        <planeGeometry args={[0.5, 0.3]} />
+      <mesh castShadow position={[0.3, 1.86, 0]} rotation={[0, 0.04, 0]}>
+        <planeGeometry args={[0.55, 0.32]} />
         <meshStandardMaterial color="#ef4444" side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
+function GolfBall({ position, radius }: { position: [number, number, number]; radius: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const dropProgress = useRef(-1);
+  const wasWin = useRef(false);
+  const status = usePhysicsStore((state) => state.metrics.status);
+
+  useFrame((_, delta) => {
+    const isWin = status === 'You Win';
+
+    if (isWin && !wasWin.current) {
+      dropProgress.current = 0;
+    }
+    wasWin.current = isWin;
+
+    if (!ref.current) return;
+
+    if (!isWin) {
+      dropProgress.current = -1;
+      ref.current.visible = true;
+      ref.current.scale.setScalar(1);
+      ref.current.position.set(position[0], position[1], position[2]);
+      return;
+    }
+
+    dropProgress.current = Math.min(1, Math.max(0, dropProgress.current) + delta / 0.58);
+
+    const t = dropProgress.current;
+    const eased = 1 - Math.pow(1 - t, 3);
+    const lateSink = Math.max(0, (eased - 0.32) / 0.68);
+    const dropDepth = Math.max(radius * 6.5, 0.14);
+
+    ref.current.position.set(
+      THREE.MathUtils.lerp(position[0], CUP_CENTER.x, eased),
+      THREE.MathUtils.lerp(position[1], -dropDepth, eased),
+      THREE.MathUtils.lerp(position[2], CUP_CENTER.z, eased),
+    );
+    ref.current.scale.setScalar(THREE.MathUtils.lerp(1, 0.42, lateSink));
+    ref.current.visible = eased < 0.86;
+  });
+
+  return (
+    <mesh ref={ref} castShadow receiveShadow position={position}>
+      <sphereGeometry args={[radius, 64, 64]} />
+      <meshPhysicalMaterial
+        color="#ffffff"
+        clearcoat={1.0}
+        clearcoatRoughness={0.1}
+        roughness={0.2}
+        metalness={0.1}
+      />
+    </mesh>
+  );
+}
+
+function GolfClub({ radius, loftRotation }: { radius: number; loftRotation: number }) {
+  const ref = useRef<THREE.Group>(null);
+  const swingTime = useRef(-1);
+  const wasActive = useRef(false);
+  const simActive = usePhysicsStore((state) => state.simActive);
+
+  useFrame((_, delta) => {
+    if (simActive && !wasActive.current) {
+      swingTime.current = 0;
+    }
+    wasActive.current = simActive;
+
+    if (!ref.current) return;
+
+    if (swingTime.current >= 0) {
+      const duration = 0.58;
+      swingTime.current += delta;
+      const t = Math.min(swingTime.current / duration, 1);
+      const windup = Math.sin(Math.min(t / 0.34, 1) * Math.PI * 0.5);
+      const followThrough = Math.max(0, (t - 0.34) / 0.66);
+      const angle = -0.72 * windup + 1.05 * followThrough;
+
+      ref.current.rotation.z = angle;
+      ref.current.position.z = 0.04 - Math.sin(t * Math.PI) * 0.08;
+
+      if (t >= 1) swingTime.current = -1;
+    } else {
+      ref.current.rotation.z = THREE.MathUtils.lerp(ref.current.rotation.z, 0, 10 * delta);
+      ref.current.position.z = THREE.MathUtils.lerp(ref.current.position.z, 0.04, 10 * delta);
+    }
+  });
+
+  return (
+    <group ref={ref} position={[0, radius, 0.04]}>
+      <group rotation={[loftRotation, 0, 0]}>
+        <mesh castShadow position={[-0.015, -0.005, 0]}>
+          <boxGeometry args={[0.07, 0.015, 0.03]} />
+          <meshStandardMaterial color="#e5e7eb" metalness={0.8} roughness={0.2} />
+        </mesh>
+      </group>
+      <mesh castShadow position={[0.02, 0.45, 0]} rotation={[0, 0, -0.1]}>
+        <cylinderGeometry args={[0.004, 0.004, 0.9]} />
+        <meshStandardMaterial color="#9ca3af" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh castShadow position={[0.065, 0.9, 0]} rotation={[0, 0, -0.1]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.25]} />
+        <meshStandardMaterial color="#1f2937" roughness={0.8} />
       </mesh>
     </group>
   );
@@ -318,6 +485,7 @@ export default function Scene() {
       <Environment preset="park" />
 
       <WaterPond />
+      <CourseDecor />
       <BoundaryWall />
       <TargetHole position={[CUP_CENTER.x, CUP_CENTER.y, CUP_CENTER.z]} />
 
@@ -339,34 +507,10 @@ export default function Scene() {
           </mesh>
         </group>
 
-        <group position={[0, radius, 0.04]}>
-          <group rotation={[loftRotation, 0, 0]}>
-            <mesh castShadow position={[-0.015, -0.005, 0]}>
-              <boxGeometry args={[0.07, 0.015, 0.03]} />
-              <meshStandardMaterial color="#e5e7eb" metalness={0.8} roughness={0.2} />
-            </mesh>
-          </group>
-          <mesh castShadow position={[0.02, 0.45, 0]} rotation={[0, 0, -0.1]}>
-            <cylinderGeometry args={[0.004, 0.004, 0.9]} />
-            <meshStandardMaterial color="#9ca3af" metalness={0.9} roughness={0.1} />
-          </mesh>
-          <mesh castShadow position={[0.065, 0.9, 0]} rotation={[0, 0, -0.1]}>
-            <cylinderGeometry args={[0.006, 0.006, 0.25]} />
-            <meshStandardMaterial color="#1f2937" roughness={0.8} />
-          </mesh>
-        </group>
+        <GolfClub radius={radius} loftRotation={loftRotation} />
       </group>
 
-      <mesh castShadow receiveShadow position={ballPosition}>
-        <sphereGeometry args={[radius, 64, 64]} />
-        <meshPhysicalMaterial 
-          color="#ffffff"
-          clearcoat={1.0}
-          clearcoatRoughness={0.1}
-          roughness={0.2}
-          metalness={0.1}
-        />
-      </mesh>
+      <GolfBall position={ballPosition} radius={radius} />
 
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[courseCenterX, 0, courseCenterZ]}>
         <planeGeometry args={[courseWidth, courseLength]} />
