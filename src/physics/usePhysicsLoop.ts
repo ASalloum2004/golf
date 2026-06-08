@@ -43,7 +43,7 @@ export function usePhysicsLoop(): void {
 
     // Detect fresh launch (simActive flipped from false → true)
     if (snap.simActive && !wasActive.current) {
-      simRef.current = createInitialState(snap);
+      simRef.current = createInitialState(snap, snap.shotStartPosition);
       accumulatorRef.current = 0;
     }
     wasActive.current = snap.simActive;
@@ -52,7 +52,8 @@ export function usePhysicsLoop(): void {
 
     // If already stopped (e.g. set by a previous frame), signal the store
     if (simRef.current.phase === 'stopped') {
-      usePhysicsStore.getState().stopSim();
+      const { x, y, z } = simRef.current.position;
+      usePhysicsStore.getState().completeShot([x, y, z], simRef.current.inCup);
       return;
     }
 
@@ -100,9 +101,10 @@ export function usePhysicsLoop(): void {
     }
 
     const status =
-      cur.inCup              ? 'You Win'  :
-      cur.phase === 'flying' ? 'Flying'   :
-      cur.phase === 'rolling'? 'Rolling'  : 'You Lose';
+      cur.inCup              ? 'You Win' :
+      cur.phase === 'flying' ? 'Flying' :
+      cur.phase === 'rolling'? 'Rolling' :
+      snap.currentShot >= snap.maxShots ? 'You Lose' : 'Stopped';
 
     usePhysicsStore.getState().updateMetrics({
       status,
@@ -118,7 +120,7 @@ export function usePhysicsLoop(): void {
 
     // Signal completion when ball has stopped
     if (cur.phase === 'stopped') {
-      usePhysicsStore.getState().stopSim();
+      usePhysicsStore.getState().completeShot([x, y, z], cur.inCup);
     }
   });
 }

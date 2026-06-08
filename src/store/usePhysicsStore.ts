@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export type SurfaceType = 'Green' | 'Fairway' | 'Rough' | 'Sand';
 export type CameraMode = 'TeeBox' | 'Follow' | 'TopDown' | 'Free';
+export type BallPosition = [number, number, number];
 
 export interface Obstacle {
   id: string;
@@ -134,12 +135,25 @@ const initialPhysicsState: PhysicsState = {
   dynamicViscosity: 0.0000181
 };
 
+const MAX_SHOTS = 3;
+const createStartBallPosition = (radius: number): BallPosition => [0, radius, 0];
+
 interface PhysicsStore extends PhysicsState {
   // Dynamic Scene State
   cameraMode: CameraMode;
-  ballPosition: [number, number, number];
+  ballPosition: BallPosition;
+  shotStartPosition: BallPosition;
   obstacles: Obstacle[];
   selectedObstacle: string | null;
+
+  // Gameplay State
+  currentShot: number;
+  maxShots: number;
+  isBallMoving: boolean;
+  canShoot: boolean;
+  gameWon: boolean;
+  gameLost: boolean;
+  stoppedPositions: BallPosition[];
   
   // Real-time Metrics (updated by Physics loop)
   metrics: {
@@ -160,12 +174,13 @@ interface PhysicsStore extends PhysicsState {
   resetParams: () => void;
   
   setCameraMode: (mode: CameraMode) => void;
-  updateBallPosition: (pos: [number, number, number]) => void;
+  updateBallPosition: (pos: BallPosition) => void;
   
   // Simulation control
   simActive: boolean;
   hitBall: () => void;
   stopSim: () => void;
+  completeShot: (finalPosition: BallPosition, inCup: boolean) => void;
   updateMetrics: (patch: Partial<PhysicsStore['metrics']>) => void;
 
   addObstacle: (type: 'Tree' | 'Wall') => void;
@@ -186,10 +201,18 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
   ...initialPhysicsState,
 
   cameraMode: 'TeeBox',
-  ballPosition: [0, initialPhysicsState.radius, 0],
+  ballPosition: createStartBallPosition(initialPhysicsState.radius),
+  shotStartPosition: createStartBallPosition(initialPhysicsState.radius),
   obstacles: [],
   selectedObstacle: null,
   simActive: false,
+  currentShot: 0,
+  maxShots: MAX_SHOTS,
+  isBallMoving: false,
+  canShoot: true,
+  gameWon: false,
+  gameLost: false,
+  stoppedPositions: [],
 
   metrics: { ...emptyMetrics },
 
@@ -197,8 +220,10 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
     const nextValue = sanitizeParam(key, value, state[key]);
     const patch: Partial<PhysicsStore> = { [key]: nextValue } as Partial<PhysicsStore>;
 
-    if (key === 'radius' && !state.simActive) {
-      patch.ballPosition = [state.ballPosition[0], nextValue as number, state.ballPosition[2]];
+    if (key === 'radius' && !state.isBallMoving) {
+      const adjustedPosition = [state.ballPosition[0], nextValue as number, state.ballPosition[2]] as BallPosition;
+      patch.ballPosition = adjustedPosition;
+      patch.shotStartPosition = adjustedPosition;
     }
 
     return patch;
@@ -211,20 +236,71 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
   resetParams: () => set((state) => ({
     ...initialPhysicsState,
     simActive: false,
-    ballPosition: [0, initialPhysicsState.radius, 0] as [number, number, number],
+    isBallMoving: false,
+    canShoot: true,
+    gameWon: false,
+    gameLost: false,
+    currentShot: 0,
+    maxShots: MAX_SHOTS,
+    ballPosition: createStartBallPosition(initialPhysicsState.radius),
+    shotStartPosition: createStartBallPosition(initialPhysicsState.radius),
+    stoppedPositions: [],
     metrics: { ...emptyMetrics },
     // keep obstacles & camera as they are
     obstacles: state.obstacles,
     cameraMode: state.cameraMode,
   })),
 
-  hitBall: () => set((state) => ({
-    simActive: true,
-    ballPosition: [0, state.radius, 0] as [number, number, number],
-    metrics: { ...emptyMetrics, status: 'Flying' },
+  hitBall: () => set((state) => {
+    if (!state.canShoot || state.isBallMoving || state.gameWon || state.gameLost || state.currentShot >= state.maxShots) {
+      return {};
+    }
+
+    const launchPosition: BallPosition = [
+      state.ballPosition[0],
+      state.ballPosition[1],
+      state.ballPosition[2],
+    ];
+
+    return {
+      simActive: true,
+      isBallMoving: true,
+      canShoot: false,
+      currentShot: state.currentShot + 1,
+      shotStartPosition: launchPosition,
+      metrics: { ...emptyMetrics, status: 'Flying' },
+    };
+  }),
+
+  stopSim: () => set((state) => ({
+    simActive: false,
+    isBallMoving: false,
+    canShoot: !state.gameWon && !state.gameLost && state.currentShot < state.maxShots,
   })),
 
-  stopSim: () => set({ simActive: false }),
+  completeShot: (finalPosition, inCup) => set((state) => {
+    const stoppedPosition: BallPosition = [
+      finalPosition[0],
+      finalPosition[1],
+      finalPosition[2],
+    ];
+    const gameWon = state.gameWon || inCup;
+    const gameLost = !gameWon && state.currentShot >= state.maxShots;
+
+    return {
+      simActive: false,
+      isBallMoving: false,
+      canShoot: !gameWon && !gameLost && state.currentShot < state.maxShots,
+      gameWon,
+      gameLost,
+      ballPosition: stoppedPosition,
+      stoppedPositions: [...state.stoppedPositions, stoppedPosition],
+      metrics: {
+        ...state.metrics,
+        status: gameWon ? 'You Win' : gameLost ? 'You Lose' : 'Stopped',
+      },
+    };
+  }),
 
   updateMetrics: (patch) => set((state) => ({
     metrics: { ...state.metrics, ...patch },

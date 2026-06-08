@@ -4,6 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
 import { usePhysicsStore } from '../../store/usePhysicsStore';
 import { CUP_CENTER, PLAY_AREA, WATER_POND } from '../../physics/constants';
+import { getShotReferenceAngle } from '../../physics/initialState';
 import { usePhysicsLoop } from '../../physics/usePhysicsLoop';
 
 /** Runs the custom physics engine inside the R3F Canvas context. */
@@ -387,6 +388,8 @@ function seededNoise(seed: number): number {
 function CameraRig() {
   const mode = usePhysicsStore(state => state.cameraMode);
   const ballPosition = usePhysicsStore(state => state.ballPosition);
+  const shotStartPosition = usePhysicsStore(state => state.shotStartPosition);
+  const isBallMoving = usePhysicsStore(state => state.isBallMoving);
   
   const vec = useMemo(() => new THREE.Vector3(), []);
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -401,8 +404,29 @@ function CameraRig() {
       target.lerp(vec.set(0, ballPosition[1], 0), smoothTime);
       state.camera.lookAt(target);
     } else if (mode === 'Follow') {
-      state.camera.position.lerp(vec.set(ballPosition[0], ballPosition[1] + 1.5, ballPosition[2] + 4), smoothTime);
-      target.lerp(vec.set(ballPosition[0], ballPosition[1], ballPosition[2]), smoothTime);
+      const referencePosition = isBallMoving ? shotStartPosition : ballPosition;
+      const referenceAngle = getShotReferenceAngle(referencePosition);
+      const forwardX = Math.sin(referenceAngle);
+      const forwardZ = -Math.cos(referenceAngle);
+      const distanceToCup = Math.hypot(CUP_CENTER.x - ballPosition[0], CUP_CENTER.z - ballPosition[2]);
+      const lookAheadDistance = THREE.MathUtils.clamp(distanceToCup * 0.35, 2, 8);
+
+      state.camera.position.lerp(
+        vec.set(
+          ballPosition[0] - forwardX * 4,
+          ballPosition[1] + 1.5,
+          ballPosition[2] - forwardZ * 4,
+        ),
+        smoothTime,
+      );
+      target.lerp(
+        vec.set(
+          ballPosition[0] + forwardX * lookAheadDistance,
+          ballPosition[1],
+          ballPosition[2] + forwardZ * lookAheadDistance,
+        ),
+        smoothTime,
+      );
       state.camera.lookAt(target);
     } else if (mode === 'TopDown') {
       state.camera.position.lerp(vec.set(0, 150, (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2), smoothTime);
@@ -417,7 +441,7 @@ function CameraRig() {
 export default function Scene() {
   const { 
     surface, horizontalAngle, loftAngle, radius, 
-    obstacles, ballPosition 
+    obstacles, ballPosition, shotStartPosition, isBallMoving, canShoot, gameWon, gameLost, metrics,
   } = usePhysicsStore();
 
   const grassTexture = useMemo(() => {
@@ -544,8 +568,15 @@ export default function Scene() {
   const courseCenterX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
   const courseCenterZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
 
-  const aimRotation = horizontalAngle * (Math.PI / 180);
   const loftRotation = loftAngle * (Math.PI / 180);
+  const aimPosition = isBallMoving ? shotStartPosition : ballPosition;
+  const aimRotation = getShotReferenceAngle(aimPosition) + horizontalAngle * (Math.PI / 180);
+  const shouldShowShotSetup =
+    !gameWon
+    && !gameLost
+    && metrics.status !== 'You Win'
+    && metrics.status !== 'You Lose'
+    && (canShoot || isBallMoving);
 
   return (
     <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 45 }}>
@@ -579,20 +610,22 @@ export default function Scene() {
         </group>
       ))}
 
-      <group rotation={[0, -aimRotation, 0]}>
-        <group position={[0, 0.005, -2.5]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.02, 5]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
-          </mesh>
-          <mesh position={[0, 0, -2.5]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.2, 0.25, 32]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.6} depthWrite={false} />
-          </mesh>
-        </group>
+      {shouldShowShotSetup && (
+        <group position={[aimPosition[0], 0, aimPosition[2]]} rotation={[0, -aimRotation, 0]}>
+          <group position={[0, 0.005, -2.5]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.02, 5]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
+            </mesh>
+            <mesh position={[0, 0, -2.5]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.2, 0.25, 32]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.6} depthWrite={false} />
+            </mesh>
+          </group>
 
-        <GolfClub radius={radius} loftRotation={loftRotation} />
-      </group>
+          <GolfClub radius={radius} loftRotation={loftRotation} />
+        </group>
+      )}
 
       <GolfBall position={ballPosition} radius={radius} />
 
