@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
 import { usePhysicsStore } from '../../store/usePhysicsStore';
 import { CUP_CENTER, PLAY_AREA, WATER_POND } from '../../physics/constants';
 import { getShotReferenceAngle } from '../../physics/initialState';
@@ -385,6 +385,134 @@ function seededNoise(seed: number): number {
   return x - Math.floor(x);
 }
 
+const COURSE_VIEW_MARGIN = 8;
+const FREECAM_MARGIN = 24;
+const FREECAM_BOUNDS = {
+  minX: PLAY_AREA.minX - FREECAM_MARGIN,
+  maxX: PLAY_AREA.maxX + FREECAM_MARGIN,
+  minY: 0.7,
+  maxY: 140,
+  minZ: PLAY_AREA.minZ - FREECAM_MARGIN,
+  maxZ: PLAY_AREA.maxZ + FREECAM_MARGIN,
+} as const;
+
+function clampFreecamPosition(position: THREE.Vector3): void {
+  position.set(
+    THREE.MathUtils.clamp(position.x, FREECAM_BOUNDS.minX, FREECAM_BOUNDS.maxX),
+    THREE.MathUtils.clamp(position.y, FREECAM_BOUNDS.minY, FREECAM_BOUNDS.maxY),
+    THREE.MathUtils.clamp(position.z, FREECAM_BOUNDS.minZ, FREECAM_BOUNDS.maxZ),
+  );
+}
+
+function FreeCameraControls() {
+  const { camera, gl } = useThree();
+  const keys = useRef(new Set<string>());
+  const isPointerLocked = useRef(false);
+  const isDragging = useRef(false);
+  const rotation = useRef({ yaw: 0, pitch: -0.25 });
+  const targetRotation = useRef({ yaw: 0, pitch: -0.25 });
+  const moveVector = useMemo(() => new THREE.Vector3(), []);
+  const viewForward = useMemo(() => new THREE.Vector3(), []);
+  const viewRight = useMemo(() => new THREE.Vector3(), []);
+  const worldUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  const euler = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), []);
+
+  useEffect(() => {
+    const initialEuler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    rotation.current = {
+      yaw: initialEuler.y,
+      pitch: THREE.MathUtils.clamp(initialEuler.x, -1.35, 1.2),
+    };
+    targetRotation.current = { ...rotation.current };
+    camera.up.set(0, 1, 0);
+
+    const canvas = gl.domElement;
+    const pressedKeys = keys.current;
+
+    const handlePointerDown = () => {
+      isDragging.current = true;
+      canvas.requestPointerLock?.();
+    };
+    const handlePointerUp = () => {
+      isDragging.current = false;
+    };
+    const handlePointerLockChange = () => {
+      isPointerLocked.current = document.pointerLockElement === canvas;
+      if (!isPointerLocked.current) isDragging.current = false;
+    };
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isPointerLocked.current && !isDragging.current) return;
+
+      const sensitivity = 0.0022;
+      targetRotation.current.yaw -= event.movementX * sensitivity;
+      targetRotation.current.pitch = THREE.MathUtils.clamp(
+        targetRotation.current.pitch - event.movementY * sensitivity,
+        -1.35,
+        1.2,
+      );
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
+        pressedKeys.add(event.code);
+        event.preventDefault();
+      }
+    };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      pressedKeys.delete(event.code);
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      pressedKeys.clear();
+      isDragging.current = false;
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    };
+  }, [camera, gl]);
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    rotation.current.yaw = THREE.MathUtils.damp(rotation.current.yaw, targetRotation.current.yaw, 18, dt);
+    rotation.current.pitch = THREE.MathUtils.damp(rotation.current.pitch, targetRotation.current.pitch, 18, dt);
+
+    euler.set(rotation.current.pitch, rotation.current.yaw, 0);
+    camera.quaternion.setFromEuler(euler);
+    camera.up.set(0, 1, 0);
+    camera.updateMatrixWorld();
+
+    camera.getWorldDirection(viewForward).normalize();
+    viewRight.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+    moveVector.set(0, 0, 0);
+
+    if (keys.current.has('KeyW')) moveVector.add(viewForward);
+    if (keys.current.has('KeyS')) moveVector.sub(viewForward);
+    if (keys.current.has('KeyD')) moveVector.add(viewRight);
+    if (keys.current.has('KeyA')) moveVector.sub(viewRight);
+    if (keys.current.has('Space')) moveVector.add(worldUp);
+    if (keys.current.has('ShiftLeft') || keys.current.has('ShiftRight')) moveVector.sub(worldUp);
+
+    if (moveVector.lengthSq() > 0) {
+      const speed = 22;
+      moveVector.normalize().multiplyScalar(speed * dt);
+      camera.position.add(moveVector);
+      clampFreecamPosition(camera.position);
+    }
+  });
+
+  return null;
+}
+
 function CameraRig() {
   const mode = usePhysicsStore(state => state.cameraMode);
   const ballPosition = usePhysicsStore(state => state.ballPosition);
@@ -400,6 +528,7 @@ function CameraRig() {
     const smoothTime = 4 * delta;
 
     if (mode === 'TeeBox') {
+      state.camera.up.set(0, 1, 0);
       state.camera.position.lerp(vec.set(0, 1.5, 4), smoothTime);
       target.lerp(vec.set(0, ballPosition[1], 0), smoothTime);
       state.camera.lookAt(target);
@@ -427,20 +556,35 @@ function CameraRig() {
         ),
         smoothTime,
       );
+      state.camera.up.set(0, 1, 0);
       state.camera.lookAt(target);
     } else if (mode === 'TopDown') {
-      state.camera.position.lerp(vec.set(0, 150, (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2), smoothTime);
-      target.lerp(vec.set(0, 0, (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2), smoothTime);
+      const width = PLAY_AREA.maxX - PLAY_AREA.minX + COURSE_VIEW_MARGIN * 2;
+      const length = PLAY_AREA.maxZ - PLAY_AREA.minZ + COURSE_VIEW_MARGIN * 2;
+      const aspect = Math.max(0.1, state.size.width / Math.max(1, state.size.height));
+      const fov = 'fov' in state.camera ? THREE.MathUtils.degToRad(state.camera.fov) : Math.PI / 4;
+      const halfFovTan = Math.tan(fov / 2);
+      const fitHeight = Math.max(
+        length / (2 * halfFovTan),
+        width / (2 * halfFovTan * aspect),
+      ) * 1.18;
+      const overviewHeight = Math.max(170, fitHeight);
+      const centerX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
+      const centerZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
+
+      state.camera.position.lerp(vec.set(centerX, overviewHeight, centerZ), smoothTime);
+      target.lerp(vec.set(centerX, 0, centerZ), smoothTime);
+      state.camera.up.set(0, 0, -1);
       state.camera.lookAt(target);
     }
   });
 
-  return mode === 'Free' ? <OrbitControls makeDefault dampingFactor={0.05} /> : null;
+  return mode === 'Free' ? <FreeCameraControls /> : null;
 }
 
 export default function Scene() {
   const { 
-    surface, horizontalAngle, loftAngle, radius, 
+    cameraMode, surface, horizontalAngle, loftAngle, radius, 
     obstacles, ballPosition, shotStartPosition, isBallMoving, canShoot, gameWon, gameLost, metrics,
   } = usePhysicsStore();
 
@@ -571,6 +715,11 @@ export default function Scene() {
   const loftRotation = loftAngle * (Math.PI / 180);
   const aimPosition = isBallMoving ? shotStartPosition : ballPosition;
   const aimRotation = getShotReferenceAngle(aimPosition) + horizontalAngle * (Math.PI / 180);
+  const isGreenView = cameraMode === 'TopDown';
+  const fogArgs: [string, number, number] = isGreenView
+    ? ['#d8f1ff', 420, 900]
+    : ['#d8f1ff', 35, 95];
+  const gridFadeDistance = isGreenView ? 260 : 50;
   const shouldShowShotSetup =
     !gameWon
     && !gameLost
@@ -579,12 +728,12 @@ export default function Scene() {
     && (canShoot || isBallMoving);
 
   return (
-    <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 45 }}>
+    <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 45, near: 0.1, far: 1200 }}>
       {/* Physics controller must be first so its useFrame runs before CameraRig */}
       <PhysicsController />
       <CameraRig />
 
-      <fog attach="fog" args={['#d8f1ff', 35, 95]} />
+      <fog key={isGreenView ? 'green-view-fog' : 'course-fog'} attach="fog" args={fogArgs} />
       <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />
       <ambientLight intensity={0.4} />
       <directionalLight 
@@ -653,7 +802,7 @@ export default function Scene() {
 
       <Grid 
         infiniteGrid 
-        fadeDistance={50} 
+        fadeDistance={gridFadeDistance} 
         sectionColor={terrain.grid} 
         cellColor={terrain.grid} 
         position={[0, 0.001, 0]} 
