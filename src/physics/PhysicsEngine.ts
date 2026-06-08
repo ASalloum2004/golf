@@ -76,7 +76,25 @@ export function physicsStep(
     flightTime += dt;
     maxHeight = Math.max(maxHeight, pos.y);
 
-    if (pos.y - p.radius <= 0 && vel.y < 0) {
+    // Water check runs BEFORE ground bounce: a ball descending through the water
+    // zone must stop in water, not receive a phantom ground bounce first.
+    const water = checkWaterAlongSegment(previousPos, pos, p.radius);
+    if (water.hit) {
+      const stopped = stopAtWater(water.point, p.radius);
+      pos = stopped.position;
+      vel = stopped.velocity;
+      omega = stopped.omega;
+      phase = stopped.phase;
+      inCup = stopped.inCup;
+    }
+
+    // segFrom tracks the effective start of the swept segment for subsequent
+    // checks. It starts as previousPos and advances to impactPos after a ground
+    // bounce, then advances to each resolved collision point inside the obstacle
+    // loop so that later checks never use a stale pre-collision origin.
+    let segFrom = previousPos.clone();
+
+    if (phase !== 'stopped' && pos.y - p.radius <= 0 && vel.y < 0) {
       const denom = Math.max(EPS, previousPos.y - pos.y);
       const impactT = clamp((previousPos.y - p.radius) / denom, 0, 1);
       const impactPos = previousPos.clone().lerp(pos, impactT).setY(p.radius);
@@ -92,25 +110,21 @@ export function physicsStep(
       vel = bounce.vel;
       omega = bounce.omega;
       phase = bounce.nextPhase;
-    }
-
-    const water = checkWaterAlongSegment(previousPos, pos, p.radius);
-    if (water.hit) {
-      const stopped = stopAtWater(water.point, p.radius);
-      pos = stopped.position;
-      vel = stopped.velocity;
-      omega = stopped.omega;
-      phase = stopped.phase;
-      inCup = stopped.inCup;
+      // Post-bounce checks sweep from the landing point, not from the
+      // pre-flight origin, so obstacles above the arc are not re-tested.
+      segFrom = impactPos.clone();
     }
 
     for (const obs of sortedObstacles) {
       if (phase === 'stopped') break;
-      const collision = checkObstacleAlongSegment(previousPos, pos, p.radius, obs);
+      const collision = checkObstacleAlongSegment(segFrom, pos, p.radius, obs);
 
       if (collision.kind === 'hard') {
         const collisionPos = collision.point ?? pos;
         const resolved = resolveHard(collisionPos, vel, omega, collision.normal, collision.depth, p);
+        // Advance segFrom so the next obstacle is tested from the resolved
+        // position, not the original pre-step origin.
+        segFrom = resolved.pos.clone();
         pos = resolved.pos;
         vel = resolved.vel;
         omega = resolved.omega;
@@ -121,7 +135,7 @@ export function physicsStep(
       }
     }
 
-    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(previousPos, pos, p.radius);
+    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(segFrom, pos, p.radius);
     if (boundary?.hit) {
       const resolved = resolveBoundaryHit(boundary, vel, omega, p);
       pos = resolved.pos;
@@ -131,7 +145,7 @@ export function physicsStep(
 
     const cup = phase === 'stopped'
       ? { inCup: false, newVel: vel.clone() }
-      : checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
+      : checkCupAlongSegment(segFrom, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
@@ -140,7 +154,7 @@ export function physicsStep(
       omega.set(0, 0, 0);
     } else {
       vel.copy(cup.newVel);
-      const flag = checkFlagstickAlongSegment(previousPos, pos, vel, p.radius, p);
+      const flag = checkFlagstickAlongSegment(segFrom, pos, vel, p.radius, p);
       if (flag.hit) vel.copy(flag.newVel);
     }
 
@@ -167,14 +181,20 @@ export function physicsStep(
       inCup = stopped.inCup;
     }
 
+    // Same segFrom pattern as flying phase: advance after each resolved
+    // obstacle so subsequent checks use the correct post-collision origin.
+    let segFrom = previousPos.clone();
+
     for (const obs of sortedObstacles) {
       if (phase === 'stopped') break;
-      const collision = checkObstacleAlongSegment(previousPos, pos, p.radius, obs);
+      const collision = checkObstacleAlongSegment(segFrom, pos, p.radius, obs);
 
       if (collision.kind === 'hard') {
         const collisionPos = collision.point ?? pos;
         const resolved = resolveHard(collisionPos, vel, omega, collision.normal, collision.depth, p);
-        pos = resolved.pos.setY(p.radius);
+        const resolvedPos = resolved.pos.clone().setY(p.radius);
+        segFrom = resolvedPos.clone();
+        pos = resolvedPos;
         vel = horizontal(resolved.vel);
         omega = resolved.omega;
       } else if (collision.kind === 'veg') {
@@ -184,17 +204,17 @@ export function physicsStep(
       }
     }
 
-    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(previousPos, pos, p.radius);
+    const boundary = phase === 'stopped' ? null : checkBoundaryAlongSegment(segFrom, pos, p.radius);
     if (boundary?.hit) {
       const resolved = resolveBoundaryHit(boundary, vel, omega, p);
-      pos = resolved.pos.setY(p.radius);
+      pos = resolved.pos.clone().setY(p.radius);
       vel = horizontal(resolved.vel);
       omega = resolved.omega;
     }
 
     const cup = phase === 'stopped'
       ? { inCup: false, newVel: vel.clone() }
-      : checkCupAlongSegment(previousPos, pos, vel, p.radius, p);
+      : checkCupAlongSegment(segFrom, pos, vel, p.radius, p);
     if (cup.inCup) {
       inCup = true;
       phase = 'stopped';
@@ -203,7 +223,7 @@ export function physicsStep(
       omega.set(0, 0, 0);
     } else {
       vel.copy(cup.newVel);
-      const flag = checkFlagstickAlongSegment(previousPos, pos, vel, p.radius, p);
+      const flag = checkFlagstickAlongSegment(segFrom, pos, vel, p.radius, p);
       if (flag.hit) vel.copy(flag.newVel);
     }
   }
