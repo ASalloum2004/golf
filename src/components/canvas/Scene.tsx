@@ -385,7 +385,7 @@ function seededNoise(seed: number): number {
   return x - Math.floor(x);
 }
 
-const COURSE_VIEW_MARGIN = 8;
+const COURSE_VIEW_MARGIN = 0.45;
 const FREECAM_MARGIN = 24;
 const FREECAM_BOUNDS = {
   minX: PLAY_AREA.minX - FREECAM_MARGIN,
@@ -559,22 +559,20 @@ function CameraRig() {
       state.camera.up.set(0, 1, 0);
       state.camera.lookAt(target);
     } else if (mode === 'TopDown') {
-      const width = PLAY_AREA.maxX - PLAY_AREA.minX + COURSE_VIEW_MARGIN * 2;
-      const length = PLAY_AREA.maxZ - PLAY_AREA.minZ + COURSE_VIEW_MARGIN * 2;
+      const courseWidth = PLAY_AREA.maxX - PLAY_AREA.minX + COURSE_VIEW_MARGIN * 2;
+      const courseLength = PLAY_AREA.maxZ - PLAY_AREA.minZ + COURSE_VIEW_MARGIN * 2;
       const aspect = Math.max(0.1, state.size.width / Math.max(1, state.size.height));
       const fov = 'fov' in state.camera ? THREE.MathUtils.degToRad(state.camera.fov) : Math.PI / 4;
       const halfFovTan = Math.tan(fov / 2);
-      const fitHeight = Math.max(
-        length / (2 * halfFovTan),
-        width / (2 * halfFovTan * aspect),
-      ) * 1.18;
-      const overviewHeight = Math.max(170, fitHeight);
+      const landscapeFramedSpan = Math.max(courseWidth, courseLength / aspect);
+      const fitHeight = landscapeFramedSpan / (2 * halfFovTan);
+      const overviewHeight = Math.max(88, fitHeight);
       const centerX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
       const centerZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
 
       state.camera.position.lerp(vec.set(centerX, overviewHeight, centerZ), smoothTime);
       target.lerp(vec.set(centerX, 0, centerZ), smoothTime);
-      state.camera.up.set(0, 0, -1);
+      state.camera.up.set(1, 0, 0);
       state.camera.lookAt(target);
     }
   });
