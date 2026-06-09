@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Grid, ContactShadows, Sky } from '@react-three/drei';
@@ -583,10 +583,21 @@ function CameraRig() {
 }
 
 export default function Scene() {
+  const [isNight, setIsNight] = useState(false);
   const { 
     cameraMode, surface, horizontalAngle, loftAngle, radius, 
     obstacles, ballPosition, shotStartPosition, isBallMoving, canShoot, gameWon, gameLost, metrics,
   } = usePhysicsStore();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.code !== 'KeyN' || event.altKey || event.ctrlKey || event.metaKey) return;
+      setIsNight((night) => !night);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const grassTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
@@ -716,10 +727,17 @@ export default function Scene() {
   const aimPosition = isBallMoving ? shotStartPosition : ballPosition;
   const aimRotation = getShotReferenceAngle(aimPosition) + horizontalAngle * (Math.PI / 180);
   const isGreenView = cameraMode === 'TopDown';
-  const fogArgs: [string, number, number] = isGreenView
-    ? ['#d8f1ff', 420, 900]
-    : ['#d8f1ff', 35, 95];
+  const fogArgs: [string, number, number] = isNight
+    ? isGreenView
+      ? ['#07111f', 460, 920]
+      : ['#07111f', 70, 180]
+    : isGreenView
+      ? ['#d8f1ff', 420, 900]
+      : ['#d8f1ff', 35, 95];
   const gridFadeDistance = isGreenView ? 260 : 50;
+  const gridColor = isNight ? '#86efac' : terrain.grid;
+  const ambientColor = isNight ? '#9fb7ff' : '#ffffff';
+  const directionalColor = isNight ? '#b9c8ff' : '#ffffff';
   const shouldShowShotSetup =
     !gameWon
     && !gameLost
@@ -733,20 +751,30 @@ export default function Scene() {
       <PhysicsController />
       <CameraRig />
 
-      <fog key={isGreenView ? 'green-view-fog' : 'course-fog'} attach="fog" args={fogArgs} />
-      <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />
-      <ambientLight intensity={0.4} />
+      <color attach="background" args={[isNight ? '#07111f' : '#d8f1ff']} />
+      <fog key={`${isNight ? 'night' : 'day'}-${isGreenView ? 'green-view' : 'course'}-fog`} attach="fog" args={fogArgs} />
+      {!isNight && <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />}
+      <ambientLight intensity={isNight ? 0.32 : 0.4} color={ambientColor} />
+      {isNight && <hemisphereLight color="#9fb7ff" groundColor="#16361f" intensity={0.45} />}
       <directionalLight 
         castShadow 
-        position={[10, 15, 10]} 
-        intensity={2} 
+        position={isNight ? [-18, 26, 16] : [10, 15, 10]} 
+        intensity={isNight ? 0.9 : 2} 
+        color={directionalColor}
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0001}
         shadow-normalBias={0.02}
       >
         <orthographicCamera attach="shadow-camera" args={[-30, 30, 30, -30, 0.1, 100]} />
       </directionalLight>
-      <Environment preset="park" />
+      {isNight && (
+        <>
+          <pointLight position={[0, 2.2, 0]} intensity={1.2} distance={12} color="#dbeafe" />
+          <pointLight position={[CUP_CENTER.x, 2.4, CUP_CENTER.z]} intensity={1.5} distance={16} color="#bbf7d0" />
+          <pointLight position={[WATER_POND.center.x, 2, WATER_POND.center.z]} intensity={0.8} distance={18} color="#7dd3fc" />
+        </>
+      )}
+      <Environment preset={isNight ? 'night' : 'park'} />
 
       <WaterPond />
       <CourseDecor />
@@ -803,8 +831,8 @@ export default function Scene() {
       <Grid 
         infiniteGrid 
         fadeDistance={gridFadeDistance} 
-        sectionColor={terrain.grid} 
-        cellColor={terrain.grid} 
+        sectionColor={gridColor} 
+        cellColor={gridColor} 
         position={[0, 0.001, 0]} 
         cellSize={1}
         sectionSize={5}
