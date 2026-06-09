@@ -6,7 +6,7 @@ export function LeftToolbar() {
   const simActive = usePhysicsStore((state) => state.simActive);
   const canShoot = usePhysicsStore((state) => state.canShoot);
   const hitBall = usePhysicsStore((state) => state.hitBall);
-  const resetParams = usePhysicsStore((state) => state.resetParams);
+  const restartAttempt = usePhysicsStore((state) => state.restartAttempt);
 
   return (
     <div className="absolute bottom-8 left-8 z-10 flex flex-col gap-3">
@@ -33,7 +33,7 @@ export function LeftToolbar() {
         )}
       </button>
       <button
-        onClick={resetParams}
+        onClick={restartAttempt}
         className="flex items-center justify-center gap-2 glass-panel hover:bg-white/5 text-slate-300 px-6 py-3 rounded-xl text-sm font-medium transition-all active:scale-95 border border-white/10"
       >
         <RotateCcw size={16} />

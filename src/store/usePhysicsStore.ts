@@ -125,7 +125,7 @@ function nextObstaclePosition(obstacles: Obstacle[], type: Obstacle['type']): [n
 
 const initialPhysicsState: PhysicsState = {
   loftAngle: 45, clubFriction: 0.8,
-  initialVelocity: 32, verticalAngle: 24, horizontalAngle: 0, spinSpeed: 500, spinAxis: 0,
+  initialVelocity: 25, verticalAngle: 24, horizontalAngle: 0, spinSpeed: 500, spinAxis: 0,
   mass: 45.93, radius: 0.02135, inertiaConstant: 0.4,
   gravity: 9.81, airDensity: 1.225, windSpeed: 0, windDirection: 0, buoyancy: true,
   dragCoeff: 0.24, liftCoeff: 0.15, sideForceCoeff: 0, spinDamping: 0.05,
@@ -172,6 +172,7 @@ interface PhysicsStore extends PhysicsState {
   updateParam: (key: keyof PhysicsState, value: unknown) => void;
   setSurface: (surface: SurfaceType) => void;
   resetParams: () => void;
+  restartAttempt: () => void;
   
   setCameraMode: (mode: CameraMode) => void;
   updateBallPosition: (pos: BallPosition) => void;
@@ -233,8 +234,33 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
     return { surface: safeSurface, ...surfacePresets[safeSurface] };
   }),
 
-  resetParams: () => set((state) => ({
-    ...initialPhysicsState,
+  resetParams: () => set((state) => {
+    const patch: Partial<PhysicsStore> = {
+      ...initialPhysicsState,
+      obstacles: state.obstacles,
+      selectedObstacle: state.selectedObstacle,
+      cameraMode: state.cameraMode,
+      ballPosition: state.isBallMoving
+        ? state.ballPosition
+        : [state.ballPosition[0], initialPhysicsState.radius, state.ballPosition[2]],
+      shotStartPosition: state.isBallMoving
+        ? state.shotStartPosition
+        : [state.ballPosition[0], initialPhysicsState.radius, state.ballPosition[2]],
+      simActive: state.simActive,
+      currentShot: state.currentShot,
+      maxShots: state.maxShots,
+      isBallMoving: state.isBallMoving,
+      canShoot: state.canShoot,
+      gameWon: state.gameWon,
+      gameLost: state.gameLost,
+      stoppedPositions: state.stoppedPositions,
+      metrics: state.metrics,
+    };
+
+    return patch;
+  }),
+
+  restartAttempt: () => set((state) => ({
     simActive: false,
     isBallMoving: false,
     canShoot: true,
@@ -242,8 +268,8 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
     gameLost: false,
     currentShot: 0,
     maxShots: MAX_SHOTS,
-    ballPosition: createStartBallPosition(initialPhysicsState.radius),
-    shotStartPosition: createStartBallPosition(initialPhysicsState.radius),
+    ballPosition: createStartBallPosition(state.radius),
+    shotStartPosition: createStartBallPosition(state.radius),
     stoppedPositions: [],
     metrics: { ...emptyMetrics },
     // keep obstacles & camera as they are
