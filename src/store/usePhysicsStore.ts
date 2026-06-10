@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type SurfaceType = 'Green' | 'Fairway' | 'Rough' | 'Sand';
-export type CameraMode = 'TeeBox' | 'Follow' | 'TopDown' | 'Free';
+export type CameraMode = 'Follow' | 'TopDown' | 'Free';
 export type BallPosition = [number, number, number];
 
 export interface Obstacle {
@@ -201,7 +201,7 @@ const emptyMetrics = {
 export const usePhysicsStore = create<PhysicsStore>((set) => ({
   ...initialPhysicsState,
 
-  cameraMode: 'TeeBox',
+  cameraMode: 'Follow',
   ballPosition: createStartBallPosition(initialPhysicsState.radius),
   shotStartPosition: createStartBallPosition(initialPhysicsState.radius),
   obstacles: [],

@@ -7,13 +7,18 @@ import { CUP_CENTER } from '../../physics/constants';
 interface GolfBallProps {
   position: [number, number, number];
   radius: number;
+  isGreenView?: boolean;
 }
 
-export function GolfBall({ position, radius }: GolfBallProps) {
+export function GolfBall({ position, radius, isGreenView = false }: GolfBallProps) {
   const ref = useRef<THREE.Mesh>(null);
   const dropProgress = useRef(-1);
   const wasWin = useRef(false);
   const status = usePhysicsStore((state) => state.metrics.status);
+
+  // In green view: render a large visible sphere centered at ground level
+  const visualRadius = isGreenView ? 1.2 : radius;
+  const visualY = isGreenView ? visualRadius : position[1];
 
   useFrame((_, delta) => {
     const isWin = status === 'You Win';
@@ -29,7 +34,7 @@ export function GolfBall({ position, radius }: GolfBallProps) {
       dropProgress.current = -1;
       ref.current.visible = true;
       ref.current.scale.setScalar(1);
-      ref.current.position.set(position[0], position[1], position[2]);
+      ref.current.position.set(position[0], visualY, position[2]);
       return;
     }
 
@@ -42,7 +47,7 @@ export function GolfBall({ position, radius }: GolfBallProps) {
 
     ref.current.position.set(
       THREE.MathUtils.lerp(position[0], CUP_CENTER.x, eased),
-      THREE.MathUtils.lerp(position[1], -dropDepth, eased),
+      THREE.MathUtils.lerp(visualY, -dropDepth, eased),
       THREE.MathUtils.lerp(position[2], CUP_CENTER.z, eased),
     );
     ref.current.scale.setScalar(THREE.MathUtils.lerp(1, 0.42, lateSink));
@@ -50,15 +55,19 @@ export function GolfBall({ position, radius }: GolfBallProps) {
   });
 
   return (
-    <mesh ref={ref} castShadow receiveShadow position={position}>
-      <sphereGeometry args={[radius, 64, 64]} />
-      <meshPhysicalMaterial
-        color="#ffffff"
-        clearcoat={1.0}
-        clearcoatRoughness={0.1}
-        roughness={0.2}
-        metalness={0.1}
-      />
+    <mesh ref={ref} castShadow receiveShadow position={[position[0], visualY, position[2]]}>
+      <sphereGeometry args={[visualRadius, isGreenView ? 16 : 64, isGreenView ? 16 : 64]} />
+      {isGreenView ? (
+        <meshBasicMaterial color="#facc15" />
+      ) : (
+        <meshPhysicalMaterial
+          color="#ffffff"
+          clearcoat={1.0}
+          clearcoatRoughness={0.1}
+          roughness={0.2}
+          metalness={0.1}
+        />
+      )}
     </mesh>
   );
 }

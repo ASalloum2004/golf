@@ -146,12 +146,7 @@ export function CameraRig() {
 
     const smoothTime = 4 * delta;
 
-    if (mode === 'TeeBox') {
-      state.camera.up.set(0, 1, 0);
-      state.camera.position.lerp(vec.set(0, 1.5, 4), smoothTime);
-      target.lerp(vec.set(0, ballPosition[1], 0), smoothTime);
-      state.camera.lookAt(target);
-    } else if (mode === 'Follow') {
+    if (mode === 'Follow') {
       const referencePosition = isBallMoving ? shotStartPosition : ballPosition;
       const referenceAngle = getShotReferenceAngle(referencePosition);
       const forwardX = Math.sin(referenceAngle);

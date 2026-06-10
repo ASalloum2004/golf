@@ -62,21 +62,35 @@ export default function Scene() {
 
       {shouldShowShotSetup && (
         <group position={[aimPosition[0], 0, aimPosition[2]]} rotation={[0, -aimRotation, 0]}>
-          <group position={[0, 0.005, -2.5]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.02, 5]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
-            </mesh>
-            <mesh position={[0, 0, -2.5]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[0.2, 0.25, 32]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.6} depthWrite={false} />
-            </mesh>
-          </group>
-          <GolfClub radius={radius} loftRotation={loftRotation} />
+          {isGreenView ? (
+            // Large yellow direction arrow visible from overhead
+            <group position={[0, 0.08, -6]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.8, 12]} />
+                <meshBasicMaterial color="#facc15" transparent opacity={0.8} depthWrite={false} />
+              </mesh>
+              <mesh position={[0, 0, -6]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[1.2, 1.8, 32]} />
+                <meshBasicMaterial color="#facc15" transparent opacity={0.9} depthWrite={false} />
+              </mesh>
+            </group>
+          ) : (
+            <group position={[0, 0.005, -2.5]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.02, 5]} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
+              </mesh>
+              <mesh position={[0, 0, -2.5]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.2, 0.25, 32]} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.6} depthWrite={false} />
+              </mesh>
+            </group>
+          )}
+          {!isGreenView && <GolfClub radius={radius} loftRotation={loftRotation} />}
         </group>
       )}
 
-      <GolfBall position={ballPosition} radius={radius} />
+      <GolfBall position={ballPosition} radius={radius} isGreenView={isGreenView} />
       <ContactShadows
         position={[ballPosition[0], 0.002, ballPosition[2]]}
         opacity={0.6}

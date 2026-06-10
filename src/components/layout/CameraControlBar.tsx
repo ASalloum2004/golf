@@ -1,9 +1,8 @@
-import { Camera, Eye, Map, Play, type LucideIcon } from 'lucide-react';
+import { Eye, Map, Play, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { usePhysicsStore, type CameraMode } from '../../store/usePhysicsStore';
 
 const cameraModes: Array<{ id: CameraMode; label: string; icon: LucideIcon }> = [
-  { id: 'TeeBox', label: 'Tee Box', icon: Camera },
   { id: 'Follow', label: 'Follow', icon: Play },
   { id: 'TopDown', label: 'Green View', icon: Map },
   { id: 'Free', label: 'Free Cam', icon: Eye },
