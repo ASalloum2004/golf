@@ -39,8 +39,8 @@ export function ShotPanel() {
         label="Horizontal Angle"
         value={horizontalAngle}
         onChange={(value) => updateParam('horizontalAngle', value)}
-        min={-45}
-        max={45}
+        min={-90}
+        max={90}
         unit="deg"
       />
       <NumberInput

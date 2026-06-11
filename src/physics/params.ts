@@ -9,7 +9,7 @@ export function sanitizeParams(p: PhysicsState): SafePhysicsParams {
     clubFriction: clamp(p.clubFriction, 0, 1),
     initialVelocity: clamp(p.initialVelocity, 0, 100),
     verticalAngle: clamp(p.verticalAngle, -20, 90),
-    horizontalAngle: clamp(p.horizontalAngle, -45, 45),
+    horizontalAngle: clamp(p.horizontalAngle, -90, 90),
     spinSpeed: clamp(p.spinSpeed, 0, 1000),
     spinAxis: clamp(p.spinAxis, -90, 90),
     mass: clamp(p.mass, 1, 1000),

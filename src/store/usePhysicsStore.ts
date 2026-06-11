@@ -55,7 +55,7 @@ const paramLimits: Partial<Record<keyof PhysicsState, [number, number]>> = {
   clubFriction: [0, 1],
   initialVelocity: [0, 100],
   verticalAngle: [-20, 90],
-  horizontalAngle: [-45, 45],
+  horizontalAngle: [-90, 90],
   spinSpeed: [0, 1000],
   spinAxis: [-90, 90],
   mass: [1, 1000],
