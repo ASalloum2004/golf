@@ -1,5 +1,9 @@
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { useTexture } from '@react-three/drei';
 import { CUP_CENTER, PLAY_AREA, WATER_POND } from '../../physics/constants';
+
+const seaTextureUrl = new URL('../../../texture/sea/OIP (1).webp', import.meta.url).href;
 
 export function Tree() {
   return (
@@ -118,6 +122,20 @@ function TargetHole({ position }: { position: [number, number, number] }) {
 }
 
 function WaterPond() {
+  const loadedSeaTexture = useTexture(seaTextureUrl);
+  const seaTexture = useMemo(() => {
+    const texture = loadedSeaTexture.clone();
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
+    return texture;
+  }, [loadedSeaTexture]);
+  useEffect(() => () => seaTexture.dispose(), [seaTexture]);
+
   const bankScale: [number, number, number] = [WATER_POND.radiusX + 0.8, WATER_POND.radiusZ + 0.45, 1];
   const reeds = [
     [-2.6, -0.8],
@@ -148,13 +166,12 @@ function WaterPond() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[WATER_POND.radiusX, WATER_POND.radiusZ, 1]}>
         <circleGeometry args={[1, 64]} />
         <meshPhysicalMaterial
-          color="#1b8db6"
-          roughness={0.03}
+          color="#ffffff"
+          map={seaTexture}
+          roughness={0.18}
           metalness={0}
-          transparent
-          opacity={0.78}
           clearcoat={1}
-          clearcoatRoughness={0.05}
+          clearcoatRoughness={0.08}
           reflectivity={0.8}
         />
       </mesh>
