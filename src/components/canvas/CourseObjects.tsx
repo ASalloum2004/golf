@@ -53,18 +53,6 @@ function Bush({ scale = 1 }: { scale?: number }) {
 }
 
 function CourseDecor() {
-  const trees = [
-    [14, 0, 36, 1.0, 0.3],
-    [40, 0, 24, 1.05, -0.4],
-    [-40, 0, 30, 0.95, 0.6],
-    [-44, 0, -14, 1.08, -0.5],
-    [44, 0, -20, 0.92, 0.25],
-    [38, 0, -70, 1.0, -0.8],
-    [-42, 0, -90, 1.05, 0.8],
-    [-12, 0, -118, 0.98, -0.2],
-    [-30, 0, -120, 1.1, 0.5],
-    [30, 0, -122, 0.95, -0.35],
-  ] as const;
   const bushes = [
     [PLAY_AREA.minX - 1.0, 0, 2, 0.74],
     [PLAY_AREA.maxX + 1.0, 0, -15, 0.82],
@@ -80,11 +68,6 @@ function CourseDecor() {
 
   return (
     <group>
-      {trees.map(([x, y, z, scale, rotation]) => (
-        <group key={`decor-tree-${x}-${z}`} position={[x, y, z]} scale={[scale, scale, scale]} rotation={[0, rotation, 0]}>
-          <Tree />
-        </group>
-      ))}
       {bushes.map(([x, y, z, scale]) => (
         <group key={`decor-bush-${x}-${z}`} position={[x, y, z]}>
           <Bush scale={scale} />
