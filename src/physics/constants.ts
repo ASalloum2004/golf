@@ -7,10 +7,10 @@ export const CUP_R = 0.054;
 export const MAX_STEP_DT = 0.05;
 
 export const PLAY_AREA = {
-  minX: -36,
-  maxX: 36,
-  minZ: -104,
-  maxZ: 16,
+  minX: -54,
+  maxX: 54,
+  minZ: -134,
+  maxZ: 46,
 } as const;
 
 export const WATER_POND = {

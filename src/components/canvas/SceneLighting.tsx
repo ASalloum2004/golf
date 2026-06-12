@@ -8,8 +8,8 @@ interface SceneLightingProps {
 
 export function SceneLighting({ isNight, isGreenView }: SceneLightingProps) {
   const fogArgs: [string, number, number] = isNight
-    ? isGreenView ? ['#07111f', 460, 920] : ['#07111f', 70, 180]
-    : isGreenView ? ['#d8f1ff', 420, 900] : ['#d8f1ff', 35, 95];
+    ? isGreenView ? ['#07111f', 460, 920] : ['#07111f', 150, 800]
+    : isGreenView ? ['#d8f1ff', 420, 900] : ['#d8f1ff', 120, 700];
 
   return (
     <>

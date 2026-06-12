@@ -60,7 +60,7 @@ export function GolfCourse({ surface, isNight, isGreenView }: GolfCourseProps) {
   const courseLength = PLAY_AREA.maxZ - PLAY_AREA.minZ;
   const courseCenterX = (PLAY_AREA.minX + PLAY_AREA.maxX) / 2;
   const courseCenterZ = (PLAY_AREA.minZ + PLAY_AREA.maxZ) / 2;
-  const gridFadeDistance = isGreenView ? 260 : 50;
+  const gridFadeDistance = isGreenView ? 260 : 220;
   const gridColor = isNight ? '#86efac' : terrain.grid;
 
   const greenTexture = useMemo(() => {
@@ -105,14 +105,14 @@ export function GolfCourse({ surface, isNight, isGreenView }: GolfCourseProps) {
       </mesh>
 
       <Grid
-        infiniteGrid
+        args={[courseWidth, courseLength]}
         fadeDistance={gridFadeDistance}
+        fadeStrength={0}
         sectionColor={gridColor}
         cellColor={gridColor}
-        position={[0, 0.001, 0]}
+        position={[courseCenterX, 0.001, courseCenterZ]}
         cellSize={1}
         sectionSize={5}
-        fadeStrength={1.5}
       />
     </>
   );

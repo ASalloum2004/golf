@@ -45,7 +45,7 @@ export default function Scene() {
     (canShoot || isBallMoving);
 
   return (
-    <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 45, near: 0.1, far: 1200 }}>
+    <Canvas shadows camera={{ position: [0, 1.5, 4], fov: 45, near: 0.1, far: 2000 }}>
       {/* Physics tick must run before CameraRig so position is up to date each frame */}
       <PhysicsController />
       <CameraRig />
@@ -65,24 +65,35 @@ export default function Scene() {
           {isGreenView ? (
             // Large yellow direction arrow visible from overhead
             <group position={[0, 0.08, -6]}>
-              <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.8, 12]} />
-                <meshBasicMaterial color="#facc15" transparent opacity={0.8} depthWrite={false} />
+              {/* dark outline keeps the arrow readable on light surfaces */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={20}>
+                <planeGeometry args={[1.04, 12.24]} />
+                <meshBasicMaterial color="#0b1220" depthTest={false} depthWrite={false} />
               </mesh>
-              <mesh position={[0, 0, -6]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[1.2, 1.8, 32]} />
-                <meshBasicMaterial color="#facc15" transparent opacity={0.9} depthWrite={false} />
+              <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
+                <planeGeometry args={[0.8, 12]} />
+                <meshBasicMaterial color="#facc15" depthTest={false} depthWrite={false} />
+              </mesh>
+              <mesh position={[0, 0.002, -6]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={22}>
+                <ringGeometry args={[1.12, 1.8, 32]} />
+                <meshBasicMaterial color="#facc15" depthTest={false} depthWrite={false} />
               </mesh>
             </group>
           ) : (
             <group position={[0, 0.005, -2.5]}>
-              <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.02, 5]} />
-                <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
+              {/* soft halo gives the line a gentle, faded edge */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={20}>
+                <planeGeometry args={[0.11, 5.08]} />
+                <meshBasicMaterial color="#fde68a" transparent opacity={0.12} depthTest={false} depthWrite={false} />
               </mesh>
-              <mesh position={[0, 0, -2.5]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.2, 0.25, 32]} />
-                <meshBasicMaterial color="#ffffff" transparent opacity={0.6} depthWrite={false} />
+              {/* thin, calm core line */}
+              <mesh position={[0, 0.0005, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
+                <planeGeometry args={[0.035, 5]} />
+                <meshBasicMaterial color="#fcd34d" transparent opacity={0.55} depthTest={false} depthWrite={false} />
+              </mesh>
+              <mesh position={[0, 0.001, -2.5]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={22}>
+                <ringGeometry args={[0.2, 0.27, 48]} />
+                <meshBasicMaterial color="#fcd34d" transparent opacity={0.55} depthTest={false} depthWrite={false} />
               </mesh>
             </group>
           )}

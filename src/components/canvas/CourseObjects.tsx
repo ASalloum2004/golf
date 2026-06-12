@@ -54,12 +54,16 @@ function Bush({ scale = 1 }: { scale?: number }) {
 
 function CourseDecor() {
   const trees = [
-    [PLAY_AREA.minX - 3.1, 0, PLAY_AREA.maxZ - 12, 0.9, 0.2],
-    [PLAY_AREA.maxX + 3.3, 0, PLAY_AREA.maxZ - 28, 1.0, -0.5],
-    [PLAY_AREA.minX - 3.5, 0, PLAY_AREA.minZ + 26, 1.05, 0.8],
-    [PLAY_AREA.maxX + 3.4, 0, PLAY_AREA.minZ + 18, 0.9, -0.9],
-    [-22, 0, PLAY_AREA.minZ - 3.2, 0.95, 0.25],
-    [24, 0, PLAY_AREA.minZ - 3.1, 1.08, -0.35],
+    [14, 0, 36, 1.0, 0.3],
+    [40, 0, 24, 1.05, -0.4],
+    [-40, 0, 30, 0.95, 0.6],
+    [-44, 0, -14, 1.08, -0.5],
+    [44, 0, -20, 0.92, 0.25],
+    [38, 0, -70, 1.0, -0.8],
+    [-42, 0, -90, 1.05, 0.8],
+    [-12, 0, -118, 0.98, -0.2],
+    [-30, 0, -120, 1.1, 0.5],
+    [30, 0, -122, 0.95, -0.35],
   ] as const;
   const bushes = [
     [PLAY_AREA.minX - 1.0, 0, 2, 0.74],
