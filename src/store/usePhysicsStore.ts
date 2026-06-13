@@ -124,7 +124,7 @@ function nextObstaclePosition(obstacles: Obstacle[], type: Obstacle['type']): [n
 }
 
 const initialPhysicsState: PhysicsState = {
-  loftAngle: 45, clubFriction: 0.8,
+  loftAngle: 0, clubFriction: 0,
   initialVelocity: 25, verticalAngle: 24, horizontalAngle: 0, spinSpeed: 500, spinAxis: 0,
   mass: 45.93, radius: 0.02135, inertiaConstant: 0.4,
   gravity: 9.81, airDensity: 1.225, windSpeed: 0, windDirection: 0, buoyancy: true,
