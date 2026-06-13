@@ -27,8 +27,8 @@ function isInsidePond(point: THREE.Vector3, radius: number): boolean {
   if (!isBelowWaterCatchHeight(point, radius)) return false;
 
   const local = toPondLocal(point);
-  const x = local.x / (WATER_POND.radiusX + radius);
-  const z = local.z / (WATER_POND.radiusZ + radius);
+  const x = local.x / WATER_POND.radiusX;
+  const z = local.z / WATER_POND.radiusZ;
   return x * x + z * z <= 1;
 }
 
@@ -42,8 +42,8 @@ export function checkWaterAlongSegment(
 
   const localFrom = toPondLocal(from);
   const localTo = toPondLocal(to);
-  const rx = WATER_POND.radiusX + radius;
-  const rz = WATER_POND.radiusZ + radius;
+  const rx = WATER_POND.radiusX;
+  const rz = WATER_POND.radiusZ;
   const dx = localTo.x - localFrom.x;
   const dz = localTo.z - localFrom.z;
 

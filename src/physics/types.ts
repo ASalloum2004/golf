@@ -9,6 +9,7 @@ export interface BallSimState {
   omega: THREE.Vector3;
   phase: SimPhase;
   inCup: boolean;
+  inWater: boolean;
   flightTime: number;
   maxHeight: number;
   landingPos: THREE.Vector3 | null;

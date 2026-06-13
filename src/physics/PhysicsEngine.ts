@@ -35,13 +35,14 @@ export { getReynoldsNumber } from './forces/reynolds';
 function stopAtWater(
   hitPoint: THREE.Vector3,
   radius: number,
-): Pick<BallSimState, 'position' | 'velocity' | 'omega' | 'phase' | 'inCup'> {
+): Pick<BallSimState, 'position' | 'velocity' | 'omega' | 'phase' | 'inCup' | 'inWater'> {
   return {
     position: new THREE.Vector3(hitPoint.x, Math.max(radius * 0.35, hitPoint.y), hitPoint.z),
     velocity: new THREE.Vector3(),
     omega: new THREE.Vector3(),
     phase: 'stopped',
     inCup: false,
+    inWater: true,
   };
 }
 
@@ -60,6 +61,7 @@ export function physicsStep(
   let omega = sanitizeVector(state.omega).clone();
   let phase: SimPhase = state.phase;
   let inCup = state.inCup;
+  let inWater = state.inWater;
   let flightTime = state.flightTime;
   let maxHeight = state.maxHeight;
   let landingPos = state.landingPos;
@@ -86,6 +88,7 @@ export function physicsStep(
       omega = stopped.omega;
       phase = stopped.phase;
       inCup = stopped.inCup;
+      inWater = stopped.inWater;
     }
 
     // segFrom tracks the effective start of the swept segment for subsequent
@@ -179,6 +182,7 @@ export function physicsStep(
       omega = stopped.omega;
       phase = stopped.phase;
       inCup = stopped.inCup;
+      inWater = stopped.inWater;
     }
 
     // Same segFrom pattern as flying phase: advance after each resolved
@@ -234,6 +238,7 @@ export function physicsStep(
     omega: sanitizeVector(omega),
     phase,
     inCup,
+    inWater,
     flightTime,
     maxHeight,
     landingPos,

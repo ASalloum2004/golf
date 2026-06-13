@@ -53,7 +53,7 @@ export function usePhysicsLoop(): void {
     // If already stopped (e.g. set by a previous frame), signal the store
     if (simRef.current.phase === 'stopped') {
       const { x, y, z } = simRef.current.position;
-      usePhysicsStore.getState().completeShot([x, y, z], simRef.current.inCup);
+      usePhysicsStore.getState().completeShot([x, y, z], simRef.current.inCup, simRef.current.inWater);
       return;
     }
 
@@ -104,6 +104,7 @@ export function usePhysicsLoop(): void {
       cur.inCup              ? 'You Win' :
       cur.phase === 'flying' ? 'Flying' :
       cur.phase === 'rolling'? 'Rolling' :
+      cur.inWater            ? 'You Lose' :
       snap.currentShot >= snap.maxShots ? 'You Lose' : 'Stopped';
 
     usePhysicsStore.getState().updateMetrics({
@@ -120,7 +121,7 @@ export function usePhysicsLoop(): void {
 
     // Signal completion when ball has stopped
     if (cur.phase === 'stopped') {
-      usePhysicsStore.getState().completeShot([x, y, z], cur.inCup);
+      usePhysicsStore.getState().completeShot([x, y, z], cur.inCup, cur.inWater);
     }
   });
 }

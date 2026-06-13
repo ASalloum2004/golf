@@ -43,6 +43,7 @@ export function createInitialState(
     ),
     phase: 'flying',
     inCup: false,
+    inWater: false,
     flightTime: 0,
     maxHeight: p.radius,
     landingPos: null,

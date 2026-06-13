@@ -181,7 +181,7 @@ interface PhysicsStore extends PhysicsState {
   simActive: boolean;
   hitBall: () => void;
   stopSim: () => void;
-  completeShot: (finalPosition: BallPosition, inCup: boolean) => void;
+  completeShot: (finalPosition: BallPosition, inCup: boolean, inWater: boolean) => void;
   updateMetrics: (patch: Partial<PhysicsStore['metrics']>) => void;
 
   addObstacle: (type: 'Tree' | 'Wall') => void;
@@ -304,14 +304,14 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
     canShoot: !state.gameWon && !state.gameLost && state.currentShot < state.maxShots,
   })),
 
-  completeShot: (finalPosition, inCup) => set((state) => {
+  completeShot: (finalPosition, inCup, inWater) => set((state) => {
     const stoppedPosition: BallPosition = [
       finalPosition[0],
       finalPosition[1],
       finalPosition[2],
     ];
     const gameWon = state.gameWon || inCup;
-    const gameLost = !gameWon && state.currentShot >= state.maxShots;
+    const gameLost = !gameWon && (inWater || state.currentShot >= state.maxShots);
 
     return {
       simActive: false,
