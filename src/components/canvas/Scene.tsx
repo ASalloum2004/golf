@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows } from '@react-three/drei';
 import { usePhysicsStore } from '../../store/usePhysicsStore';
@@ -15,6 +16,38 @@ function PhysicsController() {
   usePhysicsLoop();
   return null;
 }
+
+// Smooth, tapered aim arrow (thin shaft + triangular head + rounded tail) for the
+// overhead green view. Purely a visual shape — it does not affect aim direction,
+// which is driven by the parent group's rotation/position.
+function createAimArrowGeometry(
+  length: number,
+  shaftWidth: number,
+  headWidth: number,
+  headLength: number,
+): THREE.ShapeGeometry {
+  const halfLen = length / 2;
+  const sw = shaftWidth / 2;
+  const hw = headWidth / 2;
+  const yTail = -halfLen;
+  const yHeadBase = halfLen - headLength;
+  const yTip = halfLen;
+
+  const shape = new THREE.Shape();
+  shape.moveTo(sw, yTail);
+  shape.lineTo(sw, yHeadBase);   // up the right side of the shaft
+  shape.lineTo(hw, yHeadBase);   // out to the right shoulder of the head
+  shape.lineTo(0, yTip);         // up to the point
+  shape.lineTo(-hw, yHeadBase);  // down to the left shoulder
+  shape.lineTo(-sw, yHeadBase);
+  shape.lineTo(-sw, yTail);      // down the left side of the shaft
+  shape.absarc(0, yTail, sw, Math.PI, 2 * Math.PI, false); // rounded tail cap
+  shape.closePath();
+
+  return new THREE.ShapeGeometry(shape, 24);
+}
+
+const greenAimArrowGeometry = createAimArrowGeometry(12, 0.5, 1.5, 3.2);
 
 export default function Scene() {
   const [isNight, setIsNight] = useState(false);
@@ -63,19 +96,23 @@ export default function Scene() {
       {shouldShowShotSetup && (
         <group position={[aimPosition[0], 0, aimPosition[2]]} rotation={[0, -aimRotation, 0]}>
           {isGreenView ? (
-            // Large yellow direction arrow visible from overhead
+            // Smooth, tapered yellow aim arrow visible from overhead
             <group position={[0, 0.08, -6]}>
-              {/* dark outline keeps the arrow readable on light surfaces */}
-              <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={20}>
-                <planeGeometry args={[1.04, 12.24]} />
+              {/* dark outline keeps the slim line readable on light surfaces */}
+              <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={[1.55, 1.06, 1]}
+                geometry={greenAimArrowGeometry}
+                renderOrder={20}
+              >
                 <meshBasicMaterial color="#0b1220" depthTest={false} depthWrite={false} />
               </mesh>
-              <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
-                <planeGeometry args={[0.8, 12]} />
-                <meshBasicMaterial color="#facc15" depthTest={false} depthWrite={false} />
-              </mesh>
-              <mesh position={[0, 0.002, -6]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={22}>
-                <ringGeometry args={[1.12, 1.8, 32]} />
+              <mesh
+                position={[0, 0.001, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                geometry={greenAimArrowGeometry}
+                renderOrder={21}
+              >
                 <meshBasicMaterial color="#facc15" depthTest={false} depthWrite={false} />
               </mesh>
             </group>
