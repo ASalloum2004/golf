@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
 import { CUP_CENTER, PLAY_AREA, WATER_POND } from '../../physics/constants';
+import { FlappingFlag } from './WindEffects';
 
 const seaTextureUrl = new URL('../../../texture/sea/OIP (1).webp', import.meta.url).href;
 
@@ -100,10 +101,7 @@ function TargetHole({ position }: { position: [number, number, number] }) {
         <cylinderGeometry args={[0.009, 0.009, 2.1, 12]} />
         <meshStandardMaterial color="#e2e8f0" metalness={0.5} roughness={0.2} />
       </mesh>
-      <mesh castShadow position={[0.3, 1.86, 0]} rotation={[0, 0.04, 0]}>
-        <planeGeometry args={[0.55, 0.32]} />
-        <meshStandardMaterial color="#ef4444" side={THREE.DoubleSide} />
-      </mesh>
+      <FlappingFlag />
     </group>
   );
 }

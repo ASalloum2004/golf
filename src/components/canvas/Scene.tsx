@@ -11,6 +11,7 @@ import { GolfCourse } from './GolfCourse';
 import { CourseObjects, Tree, Wall } from './CourseObjects';
 import { GolfBall } from './GolfBall';
 import { GolfClub } from './GolfClub';
+import { MovingClouds, WindStreaks } from './WindEffects';
 
 function PhysicsController() {
   usePhysicsLoop();
@@ -84,6 +85,8 @@ export default function Scene() {
       <CameraRig />
 
       <SceneLighting isNight={isNight} isGreenView={isGreenView} />
+      <MovingClouds />
+      <WindStreaks />
       <CourseObjects />
       <GolfCourse surface={surface} isNight={isNight} isGreenView={isGreenView} />
 
