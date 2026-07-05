@@ -86,6 +86,8 @@ export function FlappingFlag() {
 // const cloudTextureUrl = new URL('I:/3-th YEAR \'25-26\'/حسابات/golf/texture/cloud/cloud.png', import.meta.url).href;
 
 export function MovingClouds() {
+  const textureRef = useRef<THREE.Texture | null>(null);
+
   // 1. استدعاء الصورة مباشرة من مجلد public (أكثر أماناً)
   const loadedTexture = useTexture('/texture/cloud/cloud.png');
   
@@ -102,14 +104,26 @@ export function MovingClouds() {
     return t;
   }, [loadedTexture]);
 
+  useEffect(() => {
+    textureRef.current = texture;
+    return () => {
+      if (textureRef.current === texture) {
+        textureRef.current = null;
+      }
+    };
+  }, [texture]);
+
   const { windSpeed, windDirection } = usePhysicsStore();
 
   useFrame((_state, delta) => { 
+    const cloudTexture = textureRef.current;
+    if (!cloudTexture) return;
+
     const a = windDirection * DEG2RAD;
     // زيادة سرعة تحريك الغيوم مع سرعة الرياح لتكون ملحوظة
     const moveSpeed = 0.002 + (windSpeed * 0.002);
-    texture.offset.x += Math.sin(a) * moveSpeed * delta;
-    texture.offset.y += Math.cos(a) * moveSpeed * delta;
+    cloudTexture.offset.x += Math.sin(a) * moveSpeed * delta;
+    cloudTexture.offset.y += Math.cos(a) * moveSpeed * delta;
   });
 
   return (

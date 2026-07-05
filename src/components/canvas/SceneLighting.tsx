@@ -20,7 +20,7 @@ export function SceneLighting({ isNight, isGreenView }: SceneLightingProps) {
         args={fogArgs}
       />
 
-      {!isNight && <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />}
+      {!isNight && !isGreenView && <Sky sunPosition={[100, 20, 100]} turbidity={0.5} rayleigh={0.8} />}
 
       <ambientLight intensity={isNight ? 0.32 : 0.4} color={isNight ? '#9fb7ff' : '#ffffff'} />
       {isNight && <hemisphereLight color="#9fb7ff" groundColor="#16361f" intensity={0.45} />}

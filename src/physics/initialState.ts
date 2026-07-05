@@ -23,14 +23,6 @@ export function createInitialState(
   const horizontal = getShotReferenceAngle(launchPosition) + p.horizontalAngle * DEG2RAD;
   const spinAxis = p.spinAxis * DEG2RAD;
   const [launchX, launchY, launchZ] = launchPosition;
-
-  // Club impact (loft + face friction). Loft tilts the launch upward (added on
-  // top of the aim angle) and, together with how much the club face grips the
-  // ball, sets the backspin imparted at contact. Backspin follows the
-  // tangential-grip relation: the face-tangential contact speed (v0·sinL) is
-  // turned into spin over the ball radius, scaled by clubFriction. Energy that
-  // goes into that spin slightly lowers the forward launch speed. With loft 0
-  // (and/or friction 0) these terms vanish and the launch is unchanged.
   const loftRad = p.loftAngle * DEG2RAD;
   const launchAngle = Math.min(vertical + loftRad * 0.5, Math.PI / 2);
   const impactSpin = (p.clubFriction * v0 * Math.sin(loftRad)) / p.radius;

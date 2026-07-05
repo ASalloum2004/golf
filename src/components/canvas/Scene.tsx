@@ -85,7 +85,7 @@ export default function Scene() {
       <CameraRig />
 
       <SceneLighting isNight={isNight} isGreenView={isGreenView} />
-      <MovingClouds />
+      {!isGreenView && <MovingClouds />}
       <WindStreaks />
       <CourseObjects />
       <GolfCourse surface={surface} isNight={isNight} isGreenView={isGreenView} />
