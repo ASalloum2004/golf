@@ -16,7 +16,7 @@ export function GolfBall({ position, radius, isGreenView = false }: GolfBallProp
   const wasWin = useRef(false);
   const status = usePhysicsStore((state) => state.metrics.status);
 
-  // In green view: render a large visible sphere centered at ground level
+
   const visualRadius = isGreenView ? 1.2 : radius;
   const visualY = isGreenView ? visualRadius : position[1];
 

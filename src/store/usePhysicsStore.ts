@@ -139,14 +139,12 @@ const MAX_SHOTS = 3;
 const createStartBallPosition = (radius: number): BallPosition => [0, radius, 0];
 
 interface PhysicsStore extends PhysicsState {
-  // Dynamic Scene State
   cameraMode: CameraMode;
   ballPosition: BallPosition;
   shotStartPosition: BallPosition;
   obstacles: Obstacle[];
   selectedObstacle: string | null;
 
-  // Gameplay State
   currentShot: number;
   maxShots: number;
   isBallMoving: boolean;
@@ -155,7 +153,6 @@ interface PhysicsStore extends PhysicsState {
   gameLost: boolean;
   stoppedPositions: BallPosition[];
   
-  // Real-time Metrics (updated by Physics loop)
   metrics: {
     status: string;
     flightTime: number;
@@ -168,7 +165,6 @@ interface PhysicsStore extends PhysicsState {
     reynoldsNumber: number;
   };
 
-  // Actions
   updateParam: (key: keyof PhysicsState, value: unknown) => void;
   setSurface: (surface: SurfaceType) => void;
   resetParams: () => void;
@@ -177,7 +173,6 @@ interface PhysicsStore extends PhysicsState {
   setCameraMode: (mode: CameraMode) => void;
   updateBallPosition: (pos: BallPosition) => void;
   
-  // Simulation control
   simActive: boolean;
   hitBall: () => void;
   stopSim: () => void;
@@ -272,7 +267,6 @@ export const usePhysicsStore = create<PhysicsStore>((set) => ({
     shotStartPosition: createStartBallPosition(state.radius),
     stoppedPositions: [],
     metrics: { ...emptyMetrics },
-    // keep obstacles & camera as they are
     obstacles: state.obstacles,
     cameraMode: state.cameraMode,
   })),

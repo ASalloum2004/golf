@@ -177,7 +177,7 @@ export function applyVegetation(
   const n = horizontal(normal);
 
   if (horizontalSpeed > EPS && n.lengthSq() > EPS) {
-    // Vegetation is a soft volume: it slows the ball and nudges it away from the branch volume.
+
     newVel.addScaledVector(n.normalize(), Math.min(1.5, horizontalSpeed * (1 - p.vegDamping) * 0.6));
   }
 

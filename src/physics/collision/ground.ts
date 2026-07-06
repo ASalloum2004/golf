@@ -17,7 +17,7 @@ export function groundBounce(
   const newVel = vel.clone();
   newVel.y += normalImpulsePerMass;
 
-  // Contact slip includes translation plus rotation at the ground contact point.
+
   const contactVelocity = newVel.clone().add(new THREE.Vector3().crossVectors(omega, contactRadius));
   const slip = horizontal(contactVelocity);
   const slipSpeed = slip.length();

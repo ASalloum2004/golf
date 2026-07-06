@@ -16,7 +16,7 @@ body {
   border: 1px solid var(--color-glass-border);
 }
 
-/* Custom Scrollbar */
+
 ::-webkit-scrollbar {
   width: 4px;
 }

@@ -40,7 +40,7 @@ export function createInitialState(
       launchSpeed * Math.sin(launchAngle),
       -launchSpeed * Math.cos(horizontal) * Math.cos(launchAngle),
     ),
-    // spinAxis=0 means backspin around +x; +/-90 means side spin around y.
+
     omega: new THREE.Vector3(
       launchSpin * Math.cos(spinAxis),
       launchSpin * Math.sin(spinAxis),

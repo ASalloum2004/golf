@@ -36,7 +36,7 @@ export function rollingStep(
   const newVel = v.clone().addScaledVector(acceleration, dt);
   newVel.y = 0;
 
-  // Frictional rolling resistance should stop the ball, not reverse it.
+
   if (newVel.dot(v) <= 0 && acceleration.dot(v) < 0) {
     return { pos: pos.clone().setY(p.radius), vel: new THREE.Vector3(), omega: new THREE.Vector3(), stopped: true };
   }
@@ -45,7 +45,7 @@ export function rollingStep(
   const newPos = pos.clone().addScaledVector(avgVel, dt);
   newPos.y = p.radius;
 
-  // For rolling without slip, omega is roughly axis x velocity divided by radius.
+
   const rollOmega = new THREE.Vector3(newVel.z / p.radius, 0, -newVel.x / p.radius);
   const decay = Math.exp(-p.spinDamping * dt);
   const newOmega = omega.clone().multiplyScalar(decay).lerp(rollOmega, 0.25);

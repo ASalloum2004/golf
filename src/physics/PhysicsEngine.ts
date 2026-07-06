@@ -1,17 +1,4 @@
-/**
- * Golf ball physics engine.
- *
- * Units:
- * - distance: metres
- * - time: seconds
- * - mass from UI: grams, converted to kg internally
- * - angles from UI: degrees, converted to radians internally
- * - spin: rad/s
- *
- * Coordinates follow the existing scene: +y is up, -z is straight downrange,
- * +x is right. The UI remains the owner of controls; this file owns only the
- * physical interpretation and time integration.
- */
+
 
 import * as THREE from 'three';
 import type { Obstacle, PhysicsState } from '../store/usePhysicsStore';
@@ -78,8 +65,8 @@ export function physicsStep(
     flightTime += dt;
     maxHeight = Math.max(maxHeight, pos.y);
 
-    // Water check runs BEFORE ground bounce: a ball descending through the water
-    // zone must stop in water, not receive a phantom ground bounce first.
+
+
     const water = checkWaterAlongSegment(previousPos, pos, p.radius);
     if (water.hit) {
       const stopped = stopAtWater(water.point, p.radius);
@@ -91,10 +78,10 @@ export function physicsStep(
       inWater = stopped.inWater;
     }
 
-    // segFrom tracks the effective start of the swept segment for subsequent
-    // checks. It starts as previousPos and advances to impactPos after a ground
-    // bounce, then advances to each resolved collision point inside the obstacle
-    // loop so that later checks never use a stale pre-collision origin.
+
+
+
+
     let segFrom = previousPos.clone();
 
     if (phase !== 'stopped' && pos.y - p.radius <= 0 && vel.y < 0) {
@@ -113,8 +100,8 @@ export function physicsStep(
       vel = bounce.vel;
       omega = bounce.omega;
       phase = bounce.nextPhase;
-      // Post-bounce checks sweep from the landing point, not from the
-      // pre-flight origin, so obstacles above the arc are not re-tested.
+
+
       segFrom = impactPos.clone();
     }
 
@@ -125,8 +112,8 @@ export function physicsStep(
       if (collision.kind === 'hard') {
         const collisionPos = collision.point ?? pos;
         const resolved = resolveHard(collisionPos, vel, omega, collision.normal, collision.depth, p);
-        // Advance segFrom so the next obstacle is tested from the resolved
-        // position, not the original pre-step origin.
+
+
         segFrom = resolved.pos.clone();
         pos = resolved.pos;
         vel = resolved.vel;
@@ -185,8 +172,8 @@ export function physicsStep(
       inWater = stopped.inWater;
     }
 
-    // Same segFrom pattern as flying phase: advance after each resolved
-    // obstacle so subsequent checks use the correct post-collision origin.
+
+
     let segFrom = previousPos.clone();
 
     for (const obs of sortedObstacles) {
