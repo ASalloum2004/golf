@@ -7,13 +7,36 @@ import { DEG2RAD } from '../../physics/constants';
 
 
 const flagVertexShader = `
- 
+  uniform float time;
+  uniform float windSpeed;
   
+  varying vec2 vUv;
   
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    
+    // UV x goes from 0 (at the pole) to 1 (at the tip of the flag).
+    // The flap amount scales up the further we are from the pole.
+    // We scale by windSpeed so stronger wind = more aggressive flap.
+    float flapAmount = vUv.x * windSpeed * 0.015;
+    
+    // A sine wave driven by position along the flag (vUv.x) and time.
+    // The frequency of the wave and its speed are driven by the wind.
+    float wave = sin(vUv.x * 8.0 - time * windSpeed * 0.4) * flapAmount;
+    
+    // Displace the vertex along the local Z axis (perpendicular to the flag surface)
+    pos.z += wave;
+    
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
 `;
 
 const flagFragmentShader = `
-  
+  varying vec2 vUv;
+  void main() {
+    // Beautiful vibrant red for the flag
+    gl_FragColor = vec4(0.937, 0.267, 0.267, 1.0); // #ef4444
   }
 `;
 
